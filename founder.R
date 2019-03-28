@@ -13,4 +13,4 @@ save(founderPop, file = "testAlphaSimR455SegSite.RData")
 
 
 
-load("testAlphaSimR.RData")
+# load("testAlphaSimR.RData")
