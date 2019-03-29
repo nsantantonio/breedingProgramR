@@ -1,5 +1,16 @@
-# simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL
+# simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL; selDHquantile = TRUE
 sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity, verbose = TRUE, skip = NULL){
+	
+	simDHdist <- function(pop, DHsampleSize = 200, GSfit = GSmodel[[1]], returnQuantile = 0.9){
+		qDH <- function(i){
+			DH <- makeDH(pop[i], nDH = DHsampleSize)
+			DH <- setEBV(DH, GSfit, simParam = simParam)
+			DHebv <- ebv(DH)
+			quantile(DHebv, returnQuantile)[[1]]
+		}
+		sapply(pop0@id, qDH)
+	}
+
 	if(!all(selectTrials > 0) | (any(selectTrials < 1) & any(selectTrials > 1))) stop("'selectTrials' must have elements between 0 and 1 or positiive integers")
 	
 	nDH <- nDHfam * DHfamSize
@@ -28,23 +39,29 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	# getAcc(RGSC[[gen(0)]])
 	# for(i in 1:4){
-	for(i in 1:(nYr + nTrial - 1)){
-		if(verbose) cat("Year:", i, "\n")
-		# i = 1
-		# predict latest RGSC with updated GS model 
-		if(i > 1) {
-			RGSC[[gen(GScylce[1]-1)]] <- setEBV(RGSC[[gen(GScylce[1]-1)]], GSmodel[[gen(i-1)]], simParam = simParam)
-		 }
-		# make selections for DH parents
-		selGStoP <- selectInd(RGSC[[length(RGSC)]], nInd = nDHfam, trait = 1, use = "ebv") # does this select from specific families? Almost certainly.
-		# selGStoP@id
-		
+	for(i in 1:(nYr + nTrial)){
+		if(i <= nYr){
+			if(verbose) cat("Year:", i, "\n")
+			# i = 1
+			# predict latest RGSC with updated GS model 
+			if(i > 1) {
+				# RGSC[[gen(GScylce[1]-1)]] <- setEBV(RGSC[[gen(GScylce[1]-1)]], GSmodel[[gen(i-1)]], simParam = simParam)
+				RGSC[[gen(GScylce[1]-1)]] <- setEBV(RGSC[[gen(GScylce[1]-1)]], GSmodel[[length(GSmodel)]], simParam = simParam)
+			 }
 
-		# make DH families
-		VDP[[trials[1]]][[gen(i)]] <- makeDH(selGStoP, nDH = DHfamSize)
-		# print mean genotypic value of DH 
-		if(verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
-		
+			# select on mean or expected quantile?
+			seltr <- if(selDHquantile) simDHdist(RGSC[[length(RGSC)]], GSmodel[[length(RGSC)]]) else 1
+			# make selections for DH parents
+			selGStoP <- selectInd(RGSC[[length(RGSC)]], nInd = nDHfam, trait = 1, use = "ebv") # does this select from specific families? Almost certainly.
+			# selGStoP@id
+			
+
+			# make DH families
+			VDP[[trials[1]]][[gen(i)]] <- makeDH(selGStoP, nDH = DHfamSize)
+			# print mean genotypic value of DH 
+			if(verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
+		}
+
 		# get generation indicies
 		genI <- tail(1:i, min(5, i))
 		genBack <- abs(genI - i) + 1
@@ -88,6 +105,7 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 				}
 			}
 
+			# add new phenotypes to training set and retrain GS model
 			trnSet <- lapply(VDP[trials[!grepl("variety", trials)]], function(x) x[names(x) %in% gen((i-max(1, lgen)):i)])
 	 		hasPop <- sapply(trnSet, length) > 0
 			train <- Reduce(c, lapply(trnSet[hasPop], function(x) Reduce(c, x)))
