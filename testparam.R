@@ -27,8 +27,8 @@ h2 <- c(0.15, 0.3, 0.3, 0.3, 0.3)
 # h2hr <- h2 / 2
 
 # generations, selection intensity
-nYr <- 6
-nTrial <- 5
+nYr <- 20
+# nTrial <- 5
 
 # nDHfam <- 50 
 # DHfamSize <- 20
@@ -38,7 +38,7 @@ nTrial <- 5
 # selVariety <- 3
 
 nDHfam <- 10 
-DHfamSize <- 20
+DHfamSize <- 100
 # selOutOfHR <- 50
 # selOutOf1plot <- 10
 # selOutOf3plot <- 5
@@ -49,9 +49,14 @@ DHfamSize <- 20
 # nLocAdv <- 3
 # nLocMET <- 10
 
+# selectTrials <- c(50, 10, 5, 5, 2)
+selectTrials <- c(0.50, 0.2, 0.2, 0.5, 0.3)
+nDH <- nDHfam * DHfamSize
+if(all(selectTrials < 1)) cat("n selected =", nDH * cumprod(selectTrials), "\n")
+
+
 trialReps <- c(1, 1, 3, 3, 3)
 trialLocs <- c(1, 1, 3, 10, 10)
-selectTrials <- c(50, 10, 5, 5, 2)
 
 # nRepsPerLocPrelim <- 1
 # nRepsPerLocAdv <- 3

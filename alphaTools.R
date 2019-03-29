@@ -48,3 +48,14 @@ pullSegSites <- function(pop, returnMatrix = TRUE){
 	if(returnMatrix) geno <- do.call(cbind, geno)
 	geno
 }
+
+
+rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...){
+	args <- list(...)
+	if(counter < level){
+		do.call(lapply, c(list(X = l, FUN = rlapply, f = f, level = level, combine = combine, counter = counter + 1), args))
+	} else {
+		result <- do.call(lapply, c(list(X = l, FUN = f), args))
+		if(identical(combine, list)) return(result) else return(do.call(combine, result))
+	}
+}

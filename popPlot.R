@@ -76,6 +76,6 @@ popList <- list(simrun, simrun)
 
 pdf("genValByGenTEST.pdf", width = 10, height = 7)
 # 
-simPlot(popList, c("blue", "green"))
+simPlot(popList, c("#00FF00", "#0000FF"))
 dev.off()
 
