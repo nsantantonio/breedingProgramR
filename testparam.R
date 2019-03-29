@@ -27,7 +27,7 @@ h2 <- c(0.15, 0.3, 0.3, 0.3, 0.3)
 # h2hr <- h2 / 2
 
 # generations, selection intensity
-nYr <- 20
+nYr <- 6
 nTrial <- 5
 
 # nDHfam <- 50 
@@ -66,7 +66,7 @@ RGSCselect <- TRUE
 returnVDPtoRGSC <- c(2, 3)
 
 # only include the last 5 generations for prediction
-lgen <- 5
+lgen <- 3
 # lgen <- nYr
 
 # other prams.
