@@ -37,8 +37,8 @@ famSize <- 100
 
 # selectTrials <- c(50, 10, 5, 5, 2)
 selectTrials <- c(0.50, 0.2, 0.2, 0.5, 0.3)
-nDH <- nDHfam * DHfamSize
-if(all(selectTrials < 1)) cat("n selected =", nDH * cumprod(selectTrials), "\n")
+nI <- nFam * famSize
+if(all(selectTrials < 1)) cat("n selected =", nI * cumprod(selectTrials), "\n")
 
 
 trialReps <- c(1, 1, 3, 3, 3)
