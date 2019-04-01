@@ -1,13 +1,16 @@
-simName <- "testSim"
+simName <- "RGSCselF1"
 # Should phenotypes from the founding population be used to update GS model?
 # Seems like this would typically be true, but for now I am going to omit them
 # such that they are onyl used for the first year of GS.
 seed <- 12345 # can be null to randomly select
 # includeFounderPheno <- FALSE 
 
+# select params
 RGSCselect <- TRUE
 selF2 <- FALSE
 nF2 <- 100
+selQuantile = FALSE
+ssd = FALSE
 
 # define founder pop
 simpleFounder <- FALSE

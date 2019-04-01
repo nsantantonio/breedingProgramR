@@ -66,7 +66,7 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 				selGStoP <- selectInd(RGSC[[length(RGSC)]], nInd = nFam, trait = 1, use = "ebv") 
 			}
 			# make DH families
-			VDP[[trials[1]]][[gen(i)]] <- if(SSD) self(selGStoP, nProgeny = famSize) else makeDH(selGStoP, nDH = famSize)
+			VDP[[trials[1]]][[gen(i)]] <- if(ssd) self(selGStoP, nProgeny = famSize) else makeDH(selGStoP, nDH = famSize)
 			# print mean genotypic value of DH 
 			if(verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
 		}
@@ -87,7 +87,7 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 			
 			#select indviduals for next years trial based on ebv and/or phenotype
 			if(i - gi < nTrial) VDP[[trials[gb + 1]]][[gen(gi)]] <- selectInd(VDP[[ti]][[gen(gi)]], nInd = selectTrials[gb], trait = 1, use = sel, returnPop = TRUE)
-			if(SSD) VDP[[trials[gb + 1]]][[gen(gi)]] <- self(VDP[[trials[gb + 1]]][[gen(gi)]])
+			if(ssd) VDP[[trials[gb + 1]]][[gen(gi)]] <- self(VDP[[trials[gb + 1]]][[gen(gi)]])
 		}
 
 		if(i <= nYr){
