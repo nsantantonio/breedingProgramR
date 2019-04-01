@@ -69,7 +69,16 @@ loci <- pullLoci(SP)
 # Reduce(intersect, loci)
 # simParam <- SP
 
+# nYr <- 6
 run1 <- sim(founderPop, simParam = SP, select = "ebv")
+
+
+# RGSCselect <- TRUE
+# selF2 <- FALSE
+# nF2 <- 100
+# selQuantile = FALSE
+# ssd = FALSE
+
 
 registerDoMC(nThreads)
 
