@@ -49,9 +49,10 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 	if(selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
 	# getAcc(RGSC[[gen(0)]])
 
-	# run prgram for nYr years
-	for(i in 1:(nYr + nTrial)){
-		if(i <= nYr){ # I need to fix this! the index still tries to set phenotypes for gereations that dont exist
+	# run program for nYr years
+	# for(i in 1:(nYr + nTrial)){ 
+	for(i in 1:(nYr + nTrial - 1)){ # not sure if I need the -1 here...
+		if(i <= nYr){ # I need to fix this! the index still tries to set phenotypes for generations that dont exist
 			if(verbose) cat("Year:", i, "\n")
 			# i = 1
 			if(i > 1) {
