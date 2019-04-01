@@ -29,6 +29,20 @@ source("alphaTools.R")
 source(paramFile)
 source(simFunc)
 
+
+simName <- "RGSCnoselF2"
+RGSCselect <- FALSE
+selF2 <- TRUE
+nF2 <- 100
+selQuantile = TRUE
+ssd = FALSE
+
+
+
+
+
+
+
 # make directory to store all results
 simDir <- paste0(parDir, "/", simName) 
 system(paste0("simdir=", simDir, "
@@ -70,14 +84,8 @@ loci <- pullLoci(SP)
 # simParam <- SP
 
 # nYr <- 6
-run1 <- sim(founderPop, simParam = SP, select = "ebv")
+# run1 <- sim(founderPop, simParam = SP, select = "ebv")
 
-
-# RGSCselect <- TRUE
-# selF2 <- FALSE
-# nF2 <- 100
-# selQuantile = FALSE
-# ssd = FALSE
 
 
 registerDoMC(nThreads)

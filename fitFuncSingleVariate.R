@@ -1,4 +1,4 @@
-# simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL; selQuantile = TRUE; SSD = FALSE
+# simParam <- SP; select = "pheno"; returnFunc = identity; verbose = TRUE; skip = NULL; selQuantile = TRUE; SSD = FALSE
 sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity, verbose = TRUE, skip = NULL){
 	if(selF2 & GScylcePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'GScylcePerYr' to 1")
 	if(selF2 & !selQuantile) warning("Selection on F2 is being performed, but not on expected quantiles, you probably want to set selQuantile = TRUE")
@@ -45,8 +45,8 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 	# initialize nuclear population
 	RGSC[[gen(0)]] <- newPop(founderPop)
 	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = "pheno", snpChip = 1, simParam = simParam)
-	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	if(selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
+	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	# getAcc(RGSC[[gen(0)]])
 
 	# run program for nYr years
