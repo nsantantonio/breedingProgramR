@@ -30,16 +30,12 @@ source(paramFile)
 source(simFunc)
 
 
-simName <- "RGSCnoselF2"
-RGSCselect <- FALSE
-selF2 <- TRUE
-nF2 <- 100
-selQuantile = TRUE
-ssd = FALSE
-
-
-
-
+# simName <- "RGSCnoselF2redo"
+# RGSCselect <- FALSE
+# selF2 <- TRUE
+# nF2 <- 100
+# selQuantile = TRUE
+# ssd = FALSE
 
 
 
@@ -91,7 +87,7 @@ loci <- pullLoci(SP)
 registerDoMC(nThreads)
 
 simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, select = "pheno")
-save(simrun, file = paste0(simName, ".RData"))
+save(simrun, SP, file = paste0(simName, ".RData"))
 
 # simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL
 
