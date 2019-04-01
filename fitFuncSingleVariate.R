@@ -12,7 +12,7 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 			DHebv <- ebv(DH)
 			quantile(DHebv, returnQuantile)[[1]]
 		}
-		sapply(pop0@id, qDH)
+		sapply(pop@id, qDH)
 	}
 
 	# select inside RGSC?
@@ -51,7 +51,7 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 
 	# run prgram for nYr years
 	for(i in 1:(nYr + nTrial)){
-		if(i <= nYr){
+		if(i <= nYr){ # I need to fix this! the index still tries to set phenotypes for gereations that dont exist
 			if(verbose) cat("Year:", i, "\n")
 			# i = 1
 			if(i > 1) {
@@ -71,8 +71,9 @@ sim <- function(founderPop, simParam = SP, select = "ebv", returnFunc = identity
 			if(verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
 		}
 
-		# get generation indicies
+		# get generation indices
 		genI <- tail(1:i, min(5, i))
+		genI <- genI[genI <= nYr]
 		genBack <- abs(genI - i) + 1
 		index = 1:length(genI)
 		for(g in index) {
