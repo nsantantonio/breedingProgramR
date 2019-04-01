@@ -1,3 +1,5 @@
 # ignore testing directory
 testSim/
 founderPop/
+results/
+figures/
