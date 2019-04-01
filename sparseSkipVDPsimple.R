@@ -16,7 +16,8 @@ parDir <- getwd()
 if(system("hostname", intern = TRUE) == "cbsurobbins.biohpc.cornell.edu") system("export OMP_NUM_THREADS=1")
 
 # set default arguments
-defArgs <- list(paramFile = "testparam.R", founderRData = "testAlphaSimR1000SegSite.RData", simFunc = "fitFuncSingleVariate.R", nThreads = 2, simName = "simNoTitle")
+defArgs <- list(paramFile = "testparam.R", founderRData = "founderPop/testAlphaSimR1000SegSite.RData", 
+				simFunc = "fitFuncSingleVariate.R", nThreads = 10, simName = "simNoTitle")
 defArgs <- getArgs(defArgs)
 attach(defArgs)
 
@@ -37,25 +38,18 @@ else
 	echo 'Directory already exists! Any results therein will be overwritten without further notice...'
 fi"))
 
+
 # set seed
 if(!is.null(seed)) set.seed(seed)
 
-# select inside RGSC?
-RGSCuse <- if(RGSCselect) "ebv" else  "rand"
 
 # create simple founder pop, either simple or from loaded MaCS sim
 if(simpleFounder) {
 	founderPop <- quickHaplo(nFounder, nChrom, nLoci, genLen = 1, ploidy = 2L, inbred = FALSE)
 } else {
 	load(founderRData)
+	founderPop <- founderPop[1:nFounder]
 }
-
-# if(!all(selectTrials > 0) | (any(selectTrials < 1) & any(selectTrials > 1))) {
-# 	stop("'selectTrials' must have elements between 0 and 1 or positiive integers")
-# }
-
-# selectTrials <- c(50, 10, 5, 5, 2)
-
 
 # Setting Simulation Parameters
 SP = SimParam$new(founderPop)
@@ -79,9 +73,8 @@ run1 <- sim(founderPop, simParam = SP, select = "ebv")
 
 registerDoMC(nThreads)
 
-simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, select = "ebv")
+simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, select = "pheno")
 save(simrun, file = paste0(simName, ".RData"))
-
 
 # simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL
 
