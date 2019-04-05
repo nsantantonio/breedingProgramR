@@ -13,11 +13,50 @@ getArgs <- function(defaultArgs) {
 # get parent directory
 parDir <- getwd()
 
-if(system("hostname", intern = TRUE) == "cbsurobbins.biohpc.cornell.edu") system("export OMP_NUM_THREADS=1")
+# if(system("hostname", intern = TRUE) == "cbsurobbins.biohpc.cornell.edu") system("export OMP_NUM_THREADS=1")
 
 # set default arguments
-defArgs <- list(paramFile = "testparam.R", founderRData = "founderPop/testAlphaSimR1000SegSite.RData", 
-				simFunc = "fitFuncSingleVariate.R", nThreads = 10, simName = "simNoTitle")
+
+defArgs <- list(seed = NULL,
+			   founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
+			   simFunc = "fitFuncSingleVariate.R", 
+			   nThreads = 10, 
+			   simName = "simNoTitle",
+			   selectInRGSC = "ebv", # ebv, rand
+			   selectOutRGSC = "ebv", # ebv, var, exp?
+			   selectInFam = "none", # none, 
+			   selectVDP = "pheno", # ebv, pheno
+			   returnVDPcrit = "pheno", # ebv?
+			   kinship = "SNP",
+			   selF2 = FALSE,
+			   nF2 = 10,
+			   selFunc = simDHdist,
+			   ssd = FALSE,
+			   simpleFounder = FALSE,
+			   nFounder = 10,
+			   nNuclear = 20,
+			   nFam = 10 ,
+			   famSize = 10,
+			   nChrom = 10,
+			   nLoci = 100,
+			   nM = floor(c(10*(9:1), 4) / 4),
+			   nQTL = c(2*(9:1), 1),
+			   Vg = 1,
+			   Vgxe = 1,
+			   founderh2 = 0.3,
+			   h2 = c(0.1, 0.3, 0.3, 0.3, 0.3),
+			   nYr = 20,
+			   selectTrials = c(0.5, 0.5, 0.5, 0.5, 0.5),
+			   trialReps = c(1, 1, 2, 3, 3),
+			   trialLocs = c(1, 1, 2, 5, 5),
+			   GScylcePerYr = 2 ,
+			   returnVDPtoRGSC = c(0, 0.5, 0, 0, 0, 1), # default to rep(0, nTrial)?
+			   lgen = 5,
+			   nGen = 20,
+			   RGSCintensity = 0.2,
+			   reps = 10,
+			   skip = NULL
+)
 defArgs <- getArgs(defArgs)
 attach(defArgs)
 
@@ -26,21 +65,12 @@ library(AlphaSimR)
 library(doMC)
 library(txtplot) 
 source("alphaTools.R")
-source(paramFile)
+# source(paramFile)
 source(simFunc)
 
 
-# simName <- "RGSCnoselF2redo"
-# RGSCselect <- FALSE
-# selF2 <- TRUE
-# nF2 <- 100
-# selQuantile = TRUE
-# ssd = FALSE
-
-
-
 # make directory to store all results
-simDir <- paste0(parDir, "/", simName) 
+simDir <- paste0(parDir, "/results/", simName) 
 system(paste0("simdir=", simDir, "
 if [ ! -d $simdir ]; then
 	mkdir $simdir
@@ -58,7 +88,7 @@ if(simpleFounder) {
 	founderPop <- quickHaplo(nFounder, nChrom, nLoci, genLen = 1, ploidy = 2L, inbred = FALSE)
 } else {
 	load(founderRData)
-	founderPop <- founderPop[1:nFounder]
+	founderPop <- founderPop[sample(1:nInd(founderPop), nFounder)]
 }
 
 # Setting Simulation Parameters
@@ -76,7 +106,7 @@ SP$setVarE(h2 = founderh2)
 SP$addSnpChip(nM)
 
 loci <- pullLoci(SP)
-# Reduce(intersect, loci)
+Reduce(intersect, loci)
 # simParam <- SP
 
 # nYr <- 6
@@ -86,7 +116,7 @@ loci <- pullLoci(SP)
 
 registerDoMC(nThreads)
 
-simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, select = "pheno")
+simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, , select = "pheno")
 save(simrun, SP, file = paste0(simName, ".RData"))
 
 # simParam <- SP; select = "ebv"; returnFunc = identity; verbose = TRUE; skip = NULL

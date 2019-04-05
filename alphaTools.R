@@ -38,7 +38,7 @@ pullLoci <- function(simParam, snpChip = 1, asList = FALSE) 	{
 	intersect(QTLsites, SNPsites)
 	list(QTL = QTLsites, SNP = SNPsites)
 }
-# get all segSites, as pullSegSiteGeno doesnt function when there are diff segSites per chrom. 
+# get all segSites, as pullSegSiteGeno doesnt function when there are diff segSites per chrom. Can this be true?
 pullSegSites <- function(pop, returnMatrix = TRUE){
 	rawToSum <- function(xk) {
 		class(xk) <- "integer"
@@ -58,4 +58,58 @@ rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...
 		result <- do.call(lapply, c(list(X = l, FUN = f), args))
 		if(identical(combine, list)) return(result) else return(do.call(combine, result))
 	}
+}
+
+
+
+getSel <- function(selCrit, n) names(sort(selCrit, decreasing = TRUE))[1:n]
+dummyFunc <- function(x, retrn) retrn
+
+# function to return expected quantiles from sampling DH individuals
+simDHdist <- function(pop, GSfit, DHsampleSize = 200, returnQuantile = 0.9) {
+	qDH <- function(i){
+		DH <- makeDH(pop[i], nDH = DHsampleSize)
+		DH <- setEBV(DH, GSfit, simParam = simParam)
+		DHebv <- ebv(DH)
+		quantile(DHebv, returnQuantile)[[1]]
+	}
+	sapply(pop@id, qDH)
+}
+
+
+getPopMeanVar <- function(parVal, parCov, Vg){
+	if(ncol(parVal) > 1) stop("cannot use more than 1 trait...") 
+	pbar <- combn(parVal, 2, mean)
+	pCovar <- parCov[lower.tri(parCov)] * Vg
+	pVarSum <- combn(diag(parCov) * Vg, 2, sum) 
+	crossvar <- pVarSum - 2 * pCovar
+	list(pbar = pbar, crossvar = crossvar, pcovar = pCovar)
+}
+
+vanRaden1 <- function(M){
+	Z <- scale(M, scale = FALSE)
+	p <- attributes(Z)[["scaled:center"]] / 2
+	ZZt <- tcrossprod(Z)
+	ZZt / (2 * crossprod(p, 1-p)[[1]])
+}
+
+getExpDist <- function(pop, GSfit, eSelInt, pullGeno = pullSnpGeno, Gvar = varA, DHsampleSize = 200, returnQuantile = 0.9) {
+	parVal <- ebv(pop)
+	rownames(parVal) <- pop@id
+	K <- vanRaden1(pullGeno(pop))
+	Vg <- Gvar(pop)
+	if(prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
+	pE <- getPopMeanVar(parVal, K, Vg)
+	do.call(rbind, combn(pop@id, 2, simplify = FALSE))
+	pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)) # does this make sense?
+	# cor(pE$pbar, pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)))
+}
+
+
+crossPlanFunc <- function(pop, nFam, famSize = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
+	allCrosses <- combn(pop@id, 2)
+	resample <- if(nFam > ncol(allCrosses)) TRUE else FALSE 
+	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
+	if(famSize > 1) crosses[, rep(1:nFam, each = famSize)]
+	t(crosses)
 }
