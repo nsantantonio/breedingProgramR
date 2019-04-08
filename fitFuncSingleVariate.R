@@ -128,13 +128,22 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				}
 				selCrit <- selFunc(RGSC[[lastRGSCgen]], GSmodel[[gen(i-1)]], quant = qInt)
 				parSel <- getSel(selCrit, nFam)
-				selGStoP <- RGSC[[lastRGSCgen]][parSel]
+				if(is.matrix(parSel)){
+					if(ncol(parSel) == 2){
+						if(famSize > 1) parSel <- parSel[rep(1:nFam, each = famSize), ]
+						selGStoP <- makeCross(RGSC[[lastRGSCgen]], crossPlan = parSel)
+					} else {
+						stop("Something is wrong with parent selection. Expecting 2 columns, p1 and p2 indicating parent pairs.")
+					}
+				} else {
+					selGStoP <- RGSC[[lastRGSCgen]][parSel]
+				}
 				if(any(!selGStoP@id %in% parSel)) stop("parent selection out of RGSC failed!")
 				# selGStoP <- selectInd(RGSC[[length(RGSC)]], nInd = nFam, trait = dummyFunc, use = , retrn = expQuant) 
 			} else {
 				selGStoP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = selectOutRGSC) 
 			}
-			# make DH families
+			# make DH families or self
 			VDP[[trials[1]]][[gen(i)]] <- if(ssd) self(selGStoP, nProgeny = famSize) else makeDH(selGStoP, nDH = famSize)
 			# print mean genotypic value of DH 
 			if(verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))

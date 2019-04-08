@@ -5,6 +5,8 @@ getArgs <- function(defaultArgs) {
 	argSplit <- strsplit(userArgs, "=")
 	argList <- lapply(argSplit, "[[", 2)
 	names(argList) <- lapply(argSplit, "[[", 1)
+	argList <- lapply(argList, function(x) strsplit(x, ",")[[1]])
+	argList <- type.convert(argList, as.is = TRUE)
 	print(argList)
 	defaultArgs[names(argList)] <- argList
 	defaultArgs

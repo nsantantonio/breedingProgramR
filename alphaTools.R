@@ -1,14 +1,19 @@
-# getArgs <- function(defaultArgs) {
-# 	args <- commandArgs(TRUE)
-# 	isAssn <- grepl("=", args)
-# 	userArgs <- args[isAssn]
-# 	argSplit <- strsplit(userArgs, "=")
-# 	argList <- lapply(argSplit, "[[", 2)
-# 	names(argList) <- lapply(argSplit, "[[", 1)
-# 	print(argList)
-# 	defaultArgs[names(argList)] <- argList
-# 	defaultArgs
-# }
+getArgs <- function(defaultArgs) {
+  args <- commandArgs(TRUE)
+  isAssn <- grepl("=", args)
+  userArgs <- args[isAssn]
+  needEval <- grepl("\\(|\\)|\\:", userArgs) 
+  argSplit <- strsplit(userArgs, "=")
+  argList <- lapply(argSplit, "[[", 2)
+  names(argList) <- lapply(argSplit, "[[", 1)
+  argList[needEval] <- lapply(argList[needEval], function(x) eval(parse(text = x)))
+  argList[!needEval] <- lapply(argList[!needEval], function(x) strsplit(x, ",")[[1]])
+  argList[!needEval] <- type.convert(argList[!needEval], as.is = TRUE)
+  print(argList)
+  defaultArgs[names(argList)] <- argList
+  defaultArgs
+}
+
 
 h2toVe <- function(h2, Vg = 1) Vg * (1-h2) / h2
 gen <- function(i) paste0("gen", i)
@@ -48,7 +53,6 @@ pullSegSites <- function(pop, returnMatrix = TRUE){
 	geno
 }
 
-
 rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...){
 	args <- list(...)
 	if(counter < level){
@@ -59,9 +63,15 @@ rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...
 	}
 }
 
-
-
-getSel <- function(selCrit, n) names(sort(selCrit, decreasing = TRUE))[1:n]
+getSel <- function(selCrit, n) {
+  if(is.data.frame(selCrit)){
+    selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
+    sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
+  } else {
+    sel <- names(sort(selCrit, decreasing = TRUE))[1:n]
+  }
+  sel
+}
 dummyFunc <- function(x, retrn) retrn
 
 # function to return expected quantiles from sampling DH individuals
@@ -98,10 +108,12 @@ getExpDist <- function(pop, GSfit, quant, pullGeno = pullSnpGeno, Gvar = varA) {
 	K <- vanRaden1(pullGeno(pop))
 	Vg <- Gvar(pop)
 	if(prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
-	pE <- getPopMeanVar(parVal, K, Vg)
-	do.call(rbind, combn(pop@id, 2, simplify = FALSE))
-	pE$pbar + qnorm(quant, sd = sqrt(pE$crossvar)) # does this make sense?
-	# cor(pE$pbar, pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)))
+  parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
+  colnames(parents) <- c("p1", "p2")
+  pE <- getPopMeanVar(parVal, K, Vg)
+	Eq <- pE$pbar + qnorm(quant, sd = sqrt(pE$crossvar)) # does this make sense?
+	data.frame(parents, selCrit = Eq)
+  # cor(pE$pbar, pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)))
 }
 
 
@@ -112,8 +124,6 @@ crossPlanFunc <- function(pop, nFam, famSize = 1){ # note this is just a random 
 	if(famSize > 1) crosses[, rep(1:nFam, each = famSize)]
 	t(crosses)
 }
-
-
 
 getPopStats <- function(resultL, meanVariety = TRUE){
     VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
