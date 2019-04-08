@@ -16,6 +16,7 @@ parDir <- getwd()
 # if(system("hostname", intern = TRUE) == "cbsurobbins.biohpc.cornell.edu") system("export OMP_NUM_THREADS=1")
 
 # set default arguments
+source(paste0(parDir, "/", "alphaTools.R"))
 
 defArgs <- list(seed = NULL,
 			   founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
@@ -32,7 +33,7 @@ defArgs <- list(seed = NULL,
 			   nF2 = 10,
 			   selFunc = simDHdist,
 			   ssd = FALSE,
-			   simpleFounder = FALSE,
+			   simpleFounder = TRUE,
 			   nFounder = 10,
 			   nNuclear = 20,
 			   nFam = 10 ,
@@ -64,7 +65,6 @@ attach(defArgs)
 library(AlphaSimR)
 library(doMC)
 library(txtplot) 
-source("alphaTools.R")
 # source(paramFile)
 source(simFunc)
 

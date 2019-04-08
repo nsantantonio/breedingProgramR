@@ -2,11 +2,6 @@
 
 # makeCrossPlan <- function(crossPlanFunc, pop, nInd){
 
-# }
-
-
-# getGeneticParams <- rlapply(,  f = genParam)
-
 
 defArgs <- list(seed = NULL,
 			   founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
@@ -19,9 +14,10 @@ defArgs <- list(seed = NULL,
 			   selectVDP = "pheno", # ebv, pheno
 			   returnVDPcrit = "pheno", # ebv?
 			   kinship = "SNP",
+			   updateVg = FALSE,
 			   selF2 = FALSE,
 			   nF2 = 10,
-			   selFunc = simDHdist,
+			   selFunc = getExpDist,
 			   ssd = FALSE,
 			   simpleFounder = FALSE,
 			   nFounder = 10,
@@ -36,7 +32,7 @@ defArgs <- list(seed = NULL,
 			   Vgxe = 1,
 			   founderh2 = 0.3,
 			   h2 = c(0.1, 0.3, 0.3, 0.3, 0.3),
-			   nYr = 20,
+			   nYr = 7,
 			   selectTrials = c(0.5, 0.5, 0.5, 0.5, 0.5),
 			   trialReps = c(1, 1, 2, 3, 3),
 			   trialLocs = c(1, 1, 2, 5, 5),
@@ -51,6 +47,7 @@ defArgs <- list(seed = NULL,
 
 # paramL = defArgs; simParam <- SP; select = "pheno"; returnFunc = identity; verbose = TRUE; skip = NULL; selQuantile = TRUE; checkParam = FALSE
 sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE){
+	# parameter checks and warnings.
 	if(checkParam){
 		paramNames <- c("founderRData", "simFunc", "nThreads", "simName", "RGSCselect", "selF2", "nF2", 
 						"selQuantile", "ssd", "simpleFounder", "nFounder", "nNuclear", "nChrom", "nLoci", 
@@ -62,9 +59,6 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	for(p in names(paramL)) assign(p, paramL[[p]])
 	if(selF2 & GScylcePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'GScylcePerYr' to 1")
 	if(selF2 & !selQuantile) warning("Selection on F2 is being performed, but not on expected quantiles, you probably want to set selQuantile = TRUE")
-
-	# # select inside RGSC?
-	# RGSCuse <- if(RGSCselect) "ebv" else  "rand"
 
 	# check selectTrials & nReturnVDPtoRGSC
 	if(!all(selectTrials > 0) | (any(selectTrials < 1) & any(selectTrials > 1))) stop("'selectTrials' must have elements between 0 and 1 or positive integers > 0")
@@ -84,8 +78,6 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	# count and rename trials
 	nTrial <- length(selectTrials)
 	trials <- c(paste0("trial", 1:nTrial), "variety")
-	# returnVDPtoRGSC <- returnVDPtoRGSC > 0
-	# returnVDPtoRGSC <- trials[returnVDPtoRGSC]
 	if(!is.null(skip)) skip <- trials[skip]
 
 	# if(!is.null(returnVDPtoRGSC)) if(!all(returnVDPtoRGSC %in% trials)) stop("somthing is wrong with returnVDPtoRGSC...") 
@@ -118,11 +110,23 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				# predict latest RGSC with updated GS model 
 				# RGSC[[gen(GScylce[1]-1)]] <- setEBV(RGSC[[gen(GScylce[1]-1)]], GSmodel[[gen(i-1)]], simParam = simParam)
 				RGSC[[lastRGSCgen]] <- setEBV(RGSC[[lastRGSCgen]], GSmodel[[gen(i-1)]], simParam = simParam)
-				predAcc[["RGSCbyYr"]][[gen(i)]] <- getAcc(RGSC[[lastRGSCgen]])
 			}
 			# select out of RGSC, on mean, expected quantile, etc...
 			if(!is.null(selFunc)) {
-				selCrit <- selFunc(RGSC[[lastRGSCgen]], GSmodel[[gen(i-1)]])
+				if(identical(selFunc, getExpDist)) {
+					if(i > nTrial) {
+						intensity <- (mean(gv(VDP[["variety"]][[gen(i - 5)]])) - mean(gv(VDP[["trial1"]][[gen(i - 5)]]))) / sqrt(varA(VDP[["trial1"]][[gen(i - 5)]])[[1]])
+						# i should probably use ebv instead. need to set ebv for varieties... or use pheno. 
+						# Also, should note that pheno of varieties will always be biased upward due to select on error?
+						# intensity <- (mean(ebv(VDP[["variety"]][[gen(i - 5)]])) - mean(ebv(VDP[["trial1"]][[gen(i - 5)]]))) / sqrt(varA(VDP[["trial1"]][[gen(i - 5)]])[[1]])
+						qInt <- pnorm(intensity)
+					} else {
+						qInt <- 1 - selectTrials[nTrial] / selectTrials[1] 
+					} 
+				} else {
+					qInt <- 0.9
+				}
+				selCrit <- selFunc(RGSC[[lastRGSCgen]], GSmodel[[gen(i-1)]], quant = qInt)
 				parSel <- getSel(selCrit, nFam)
 				selGStoP <- RGSC[[lastRGSCgen]][parSel]
 				if(any(!selGStoP@id %in% parSel)) stop("parent selection out of RGSC failed!")
@@ -146,7 +150,8 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			gb <- genBack[g]
 			ti <- trials[gb]
 			#phenotype if not skipped
-			if(!ti %in% skip) VDP[[ti]][[gen(gi)]] <- setPheno(VDP[[ti]][[gen(gi)]], varE = h2toVe(h2[gb], Vg), reps = trialReps[gb] * trialLocs[gb])
+			Vgi <- if(updateVg) varG(VDP[[ti]][[gen(gi)]])[[1]] else Vg
+			if(!ti %in% skip) VDP[[ti]][[gen(gi)]] <- setPheno(VDP[[ti]][[gen(gi)]], varE = h2toVe(h2[gb], Vgi), reps = trialReps[gb] * trialLocs[gb])
 
 			# set ebv (does this use phenotypes if not set above? need to check...), Yes if those phenotypes were in the trainning pop for RRBLUP fit. 
 			if(select == "ebv" | !is.null(skip)) {
@@ -154,7 +159,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				predAcc[[ti]][[gen(gi)]] <- getAcc(VDP[[ti]][[gen(gi)]])
 			}
 
-			# NEED TO MOVE SELECTION TILL AFTER GS MODEL UPDATED!!!
+			# NEED TO MOVE SELECTION TILL AFTER GS MODEL UPDATED!!! why? they should get removed
 			# select indviduals for next years trial based on ebv and/or phenotype
 			sel <- if(ti %in% skip) "ebv" else  select
 			if(i - gi < nTrial) VDP[[trials[gb + 1]]][[gen(gi)]] <- selectInd(VDP[[ti]][[gen(gi)]], nInd = selectTrials[gb], trait = 1, use = sel, returnPop = TRUE)
@@ -165,7 +170,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# run GS model to cycle through RGSC for year i
 			for(j in GScylce){
 				if(j != GScylce[1]) RGSC[[gen(j-1)]] <- setEBV(RGSC[[gen(j-1)]], GSmodel[[gen(i-1)]], simParam = simParam)
-				predAcc[["RGSCinYr"]][[gen(j-1)]] <- getAcc(RGSC[[gen(j-1)]])
+				predAcc[["RGSC"]][[gen(j-1)]] <- getAcc(RGSC[[gen(j-1)]])
 				RGSC[[gen(j)]] <- selectCross(pop = RGSC[[gen(j-1)]], nInd = RGSC[[gen(j-1)]]@nInd * RGSCintensity, 
 											   use = selectInRGSC,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = 1) 
 				if(selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
@@ -210,8 +215,9 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			GSmodel[[gen(i)]] <- GSmodel[[gen(i-1)]]
 		}
 	}
-	rL <- returnFunc(list(SP = SP, paramL = paramL, RGSC = RGSC, VDP = VDP, GSmodel = GSmodel, predAcc = predAcc))
-	return(rL)
+
+	rL <- list(SP = SP, paramL = paramL, RGSC = RGSC, VDP = VDP, GSmodel = GSmodel, predAcc = predAcc)
+	returnFunc(rL)
 }
 
 # simDHdist <- function(pop, returnQuantile = 0.9){
