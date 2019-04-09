@@ -1,4 +1,21 @@
-getArgs <- function(defaultArgs) {
+# getArgs <- function(defaultArgs) {
+#   args <- commandArgs(TRUE)
+#   isAssn <- grepl("=", args)
+#   userArgs <- args[isAssn]
+#   needEval <- grepl("\\(|\\)|\\:", userArgs) 
+#   argSplit <- strsplit(userArgs, "=")
+#   argList <- lapply(argSplit, "[[", 2)
+#   names(argList) <- lapply(argSplit, "[[", 1)
+#   argList[needEval] <- lapply(argList[needEval], function(x) eval(parse(text = x)))
+#   argList[!needEval] <- lapply(argList[!needEval], function(x) strsplit(x, ",")[[1]])
+#   argList[!needEval] <- type.convert(argList[!needEval], as.is = TRUE)
+#   print(argList)
+#   defaultArgs[names(argList)] <- argList
+#   defaultArgs
+# }
+
+getArgs <- function(defaultArgs = NULL) {
+  defaults <- !is.null(defaultArgs)
   args <- commandArgs(TRUE)
   isAssn <- grepl("=", args)
   userArgs <- args[isAssn]
@@ -10,9 +27,22 @@ getArgs <- function(defaultArgs) {
   argList[!needEval] <- lapply(argList[!needEval], function(x) strsplit(x, ",")[[1]])
   argList[!needEval] <- type.convert(argList[!needEval], as.is = TRUE)
   print(argList)
-  defaultArgs[names(argList)] <- argList
-  defaultArgs
+  if(defaults){
+    defaultArgs[names(argList)] <- argList
+    return(defaultArgs)
+  } else {
+    return(argList)
+  }
 }
+
+# popList <- list(1, 2, list(3, 4, list(5, 6, list(7))), list(8, list(9, 10)))
+
+# cR <- function(popList){
+#   unlist(lapply(popList, function(x) if(is.list(x)) cR(x) else x), recursive = FALSE)
+# }
+# cR(popList)
+
+mergePopsRec <- function(popList) mergePops(lapply(popList, function(x) if(is.list(x)) mergePopsRec(x) else x))
 
 
 h2toVe <- function(h2, Vg = 1) Vg * (1-h2) / h2
@@ -91,7 +121,7 @@ getPopMeanVar <- function(parVal, parCov, Vg){
 	pbar <- combn(parVal, 2, mean)
 	pCovar <- parCov[lower.tri(parCov)] * Vg
 	pVarSum <- combn(diag(parCov) * Vg, 2, sum) 
-	crossvar <- pVarSum - 2 * pCovar
+	crossvar <- max(0, pVarSum - 2 * pCovar)
 	list(pbar = pbar, crossvar = crossvar, pcovar = pCovar)
 }
 
@@ -125,7 +155,7 @@ crossPlanFunc <- function(pop, nFam, famSize = 1){ # note this is just a random 
 	t(crosses)
 }
 
-getPopStats <- function(resultL, meanVariety = TRUE){
+getPopStats <- function(resultL, meanVariety = FALSE){
     VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
     RGSCparam <- lapply(resultL[["RGSC"]], genParam)
     # pop <- list(RGSC = RGSCparam, VDP = VDPparam)
@@ -134,7 +164,7 @@ getPopStats <- function(resultL, meanVariety = TRUE){
     GScylcePerYr <- (length(resultL[["RGSC"]]) - 1) / nYr 
     yr <- 1:nYr
     Ryr <- yr * GScylcePerYr
-    Rcyc <- 1:(GScylcePerYr * nYr)
+    Rcyc <- c(0, 1:(GScylcePerYr * nYr))
 
     VgRGSC <- sapply(RGSCparam, "[[", "varG")
     # gvRGSC <- sapply(pop[["RGSC"]], function(x) mean(x$gv_a)) # this is misleading
@@ -152,7 +182,7 @@ getPopStats <- function(resultL, meanVariety = TRUE){
     }
     acc <- resultL$predAcc[["RGSC"]]
     theorMax <- maxBv(resultL$SP)
-    return(list(SP = resultL$SP, Rcyc = Rcyc, Vg = VgRGSC, gv = gvRGSC, sd = SDgRGSC, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, acc = acc, theorMax = theorMax))
+    return(list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, Vg = VgRGSC, gv = gvRGSC, sd = SDgRGSC, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, acc = acc, theorMax = theorMax))
 }
 
 
@@ -199,8 +229,10 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, popcol = "#000000", alp
     if(vLine) abline(lm(simL$vy ~ simL$vx ), col = popcol)
   }
 
+
+# baseCols = c("#00FF00", "#0000FF")
 simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRUE){
-    if(class(popList[[1]][[1]][[1]]) == "Pop") popList <- list(popList) # checks that popList is a list of pop
+    # if(class(popList[[1]][[1]][[1]]) == "Pop") popList <- list(popList) # checks that popList is a list of pop
     
     if(length(baseCols) != length(popList)) stop("baseCols must be same length as popList!")
     lineCol <- paste0(baseCols, "FF")
@@ -208,16 +240,21 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
     polyCol <- paste0(baseCols, "4D")
 
     if(!is.null(popLabs)) popLabs <- names(popList)
-    yr <- 1:nYr
-    RGSCyr <- yr * GScylcePerYr
-    RGSCgen <- c(0, 1:(nYr * GScylcePerYr))
-    
-    simStats <- rlapply(popList, f=getPopStats, level = 2, Ryr = RGSCyr)
+    # yr <- 1:nYr
+    # RGSCyr <- yr * GScylcePerYr
+    # RGSCgen <- c(0, 1:(nYr * GScylcePerYr))
+    # simStats <- rlapply(popList, f=getPopStats, level = 2, Ryr = RGSCyr)
+
+    # GScylcePerYr <- 2
+    GScylcePerYr <- popList[[1]][[1]][["paramL"]][["GScylcePerYr"]]
+    simStats <- lapply(popList, function(x) lapply(x, function(xx) xx[!names(xx) %in% c("SP", "paramL")]))
     simStatsInv <- lapply(simStats, invertList)
-
     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
-    simAvg <- rlapply(simReps, f = colMeans, level = 2)
+    simAvg <- rlapply(simReps, f = colMeans, level = 2, na.rm = TRUE)
 
+    RGSCyr <- simAvg[[1]][["RGSCyr"]]
+    RGSCgen <- simAvg[[1]][["Rcyc"]]
+    yr <- RGSCyr / GScylcePerYr
     xlims <- range(c(0, RGSCgen))
     ylims <- range(sapply(simReps, getYrange)) * 1.1
 
@@ -225,7 +262,7 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 
     for(i in 1:length(popList)){
-      invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen))
+      invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = baseCols[i]))
       plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine)
     }
 
@@ -240,8 +277,53 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
          pch = c(NA, 22, 16),
          pt.bg = c(NA, polyCol, ptCol),
         )
-  }
+	}
 }
+
+
+# simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRUE){
+#     if(class(popList[[1]][[1]][[1]]) == "Pop") popList <- list(popList) # checks that popList is a list of pop
+    
+#     if(length(baseCols) != length(popList)) stop("baseCols must be same length as popList!")
+#     lineCol <- paste0(baseCols, "FF")
+#     ptCol <- paste0(baseCols, "FF")
+#     polyCol <- paste0(baseCols, "4D")
+
+#     if(!is.null(popLabs)) popLabs <- names(popList)
+#     yr <- 1:nYr
+#     RGSCyr <- yr * GScylcePerYr
+#     RGSCgen <- c(0, 1:(nYr * GScylcePerYr))
+    
+#     simStats <- rlapply(popList, f=getPopStats, level = 2, Ryr = RGSCyr)
+#     simStatsInv <- lapply(simStats, invertList)
+
+#     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
+#     simAvg <- rlapply(simReps, f = colMeans, level = 2)
+
+#     xlims <- range(c(0, RGSCgen))
+#     ylims <- range(sapply(simReps, getYrange)) * 1.1
+
+#     plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
+#     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+
+#     for(i in 1:length(popList)){
+#       invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen))
+#       plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine)
+#     }
+
+#     if(length(popList) > 1) {
+#         legend("topright", legend = popLabs, col=baseCols, lty = 1)
+#       } else {
+#         legend("topright", legend = c("RGSC mean", expression(paste('RGSC ', sigma[g])), "Variety mean"), 
+#          # fill = c(NA, polyCol, NA), 
+#          bty = "n",
+#          col = c(lineCol, "black", ptCol),
+#          lty = c(1, 0, 0), lwd = c(2, 0, 0),
+#          pch = c(NA, 22, 16),
+#          pt.bg = c(NA, polyCol, ptCol),
+#         )
+#   }
+# }
 
 # # popList <- list(simrun, simrun)
 # popList <- list(simrun)
