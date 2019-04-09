@@ -45,7 +45,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 	# initialize nuclear population, train GS model (necessary?), predict ebv (note the ebv's should be bad if markers are not exactly on QTL) 
 	RGSC[[gen(0)]] <- newPop(founderPop)
-	RGSC[[gen(0)]] <- if(nFam > nInd(RGSC[[gen(0)]])) selectCross(RGSC[[gen(0)]], nInd = nInd(RGSC[[gen(0)]]), use = "rand", simParam = simParam, nCrosses = nFam) 
+	if(nFam > nInd(RGSC[[gen(0)]])) RGSC[[gen(0)]] <- selectCross(RGSC[[gen(0)]], nInd = nInd(RGSC[[gen(0)]]), use = "rand", simParam = simParam, nCrosses = nFam) 
 	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = "pheno", snpChip = 1, simParam = simParam)
 	if(selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
