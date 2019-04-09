@@ -195,7 +195,7 @@ invertList <-  function(ll) {
     lapply(ll, function(X) X[!sapply(X, is.null)])
 }
 
-plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", alpha = "0D", alphaMean = "0D", ...){
+plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", alpha = "0D", alphaMean = "0D", pch = 1){
 	polycol <- paste0(popcol, alphaMean)
 	popcol <- paste0(popcol, alpha)
 	# attach(simL)
@@ -204,7 +204,7 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", al
 
 	polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
 	lines(x = Rgen, y = simL$gv, type = "l", col = popcol, lwd = 2)
-	points(simL$vx, simL$vy, col = popcol, ...)
+	points(simL$vx, simL$vy, col = popcol, pch = pch)
     if (vLine == "linear") {
 		abline(lm(vy ~ vx, data = simL), col = popcol, lwd = 2)
     } else if (vLine == "curve"){	
