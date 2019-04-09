@@ -195,19 +195,24 @@ invertList <-  function(ll) {
     lapply(ll, function(X) X[!sapply(X, is.null)])
 }
 
-plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, popcol = "#000000", alpha = "0D", alphaMean = "0D"){
-    polycol <- paste0(popcol, alphaMean)
-    popcol <- paste0(popcol, alpha)
-    # attach(simL)
-    xpoly <- c(Rgen, rev(Rgen), Rgen[1])
-    ypoly <- c(simL$gv + simL$sd, rev(simL$gv - simL$sd), simL$gv[1] + simL$sd[1])
+plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, vlinFit = FALSE, vCurve = FALSE, popcol = "#000000", alpha = "0D", alphaMean = "0D", ...){
+	polycol <- paste0(popcol, alphaMean)
+	popcol <- paste0(popcol, alpha)
+	# attach(simL)
+	xpoly <- c(Rgen, rev(Rgen), Rgen[1])
+	ypoly <- c(simL$gv + simL$sd, rev(simL$gv - simL$sd), simL$gv[1] + simL$sd[1])
 
-    polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
-    lines(x = Rgen, y = simL$gv, type = "l", col = popcol, lwd = 2)
-    points(simL$vx, simL$vy, col = popcol, pch = 1)
-    if(vLine) abline(lm(simL$vy ~ simL$vx ), col = popcol)
-  }
-
+	polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
+	lines(x = Rgen, y = simL$gv, type = "l", col = popcol, lwd = 2)
+	points(simL$vx, simL$vy, col = popcol, ...)
+    if(vLine) lines(simL$vx, simL$vy, col = popcol, lwd = 2)
+	if(vlinFit) abline(lm(vy ~ vx, data = simL), col = popcol, lwd = 2)
+	if(vCurve) {
+		smoothFit <- loess(vy ~ vx, data = simL)
+		smx <- seq(min(simL$vx), max(simL$vx), by = 0.1)
+		lines(smx, predict(smoothFit, newdata = data.frame(vx = smx)), type = "l", col = popcol, lwd = 2)
+	}
+}
 
 simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRUE, meanVariety = TRUE, legendPos = "topleft"){
     avgInGen <- function(x, xname) {
@@ -240,7 +245,7 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
 
     for(i in 1:length(popList)){
     	invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = baseCols[i]))
-    	plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine)
+    	plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
     }
 
     if(length(popList) > 1) {
