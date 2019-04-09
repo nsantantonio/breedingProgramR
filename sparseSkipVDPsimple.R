@@ -8,9 +8,9 @@ defArgs <- list(
 # simulation parameters
 	seed = 12345,
 	nThreads = 20, 
-	simName = "selectMean",
+	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
-	nGen = 20,
+	nYr = 10,
 	reps = 10,
 	lgen = 5,
 # founder parameters
@@ -29,9 +29,9 @@ defArgs <- list(
 	skip = NULL,
 # family parameters
 	nFounder = 10,
-	nNuclear = 50,
-	nFam = 20,
-	famSize = 50,
+	nNuclear = 20,
+	nFam = 10,
+	famSize = 10,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 10,
@@ -41,7 +41,6 @@ defArgs <- list(
 	updateVg = FALSE,
 	# Vgxe = 1,
 	h2 = c(0.1, 0.3, 0.3, 0.3, 0.3),
-	nYr = 20,
 	selectTrials = c(0.5, 0.5, 0.4, 0.3, 1/3),
 	trialReps = c(1, 1, 2, 3, 3),
 	trialLocs = c(1, 1, 2, 5, 5),
@@ -108,11 +107,15 @@ SP$addSnpChip(nM)
 
 loci <- pullLoci(SP)
 Reduce(intersect, loci)
-# simParam <- SP
-run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
-setMKLthreads(1)
-registerDoMC(reps * 2)
+# run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
+
+if(system("hostname", intern = TRUE) == "Bender") {
+	setMKLthreads(1)
+	registerDoMC(reps * 2)
+} else {
+	registerDoMC(reps * 2)
+}
 
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 

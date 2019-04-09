@@ -5,7 +5,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		paramNames <- c("founderRData", "simFunc", "nThreads", "simName", "RGSCselect", "selF2", "nF2", 
 						"selQuantile", "ssd", "simpleFounder", "nFounder", "nNuclear", "nChrom", "nLoci", 
 						"nM", "nQTL", "Vg", "Vgxe", "founderh2", "h2", "nYr", "nFam", "famSize", "selectTrials", 
-						"trialReps", "trialLocs", "GScylcePerYr", "returnVDPtoRGSC", "lgen", "nGen", "RGSCintensity", "reps")
+						"trialReps", "trialLocs", "GScylcePerYr", "returnVDPtoRGSC", "lgen", "RGSCintensity", "reps")
 		if(!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
 	}
 	for(p in names(paramL)) assign(p, paramL[[p]])
@@ -135,7 +135,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			for(j in GScylce){
 				if(j != GScylce[1]) RGSC[[gen(j-1)]] <- setEBV(RGSC[[gen(j-1)]], GSmodel[[lastGSmodel]], simParam = simParam)
 				predAcc[["RGSC"]][[gen(j-1)]] <- getAcc(RGSC[[gen(j-1)]])
-				RGSC[[gen(j)]] <- selectCross(pop = RGSC[[gen(j-1)]], nInd = RGSC[[gen(j-1)]]@nInd * RGSCintensity, 
+				RGSC[[gen(j)]] <- selectCross(pop = RGSC[[gen(j-1)]], nInd = round(RGSC[[gen(j-1)]]@nInd * RGSCintensity), 
 											   use = selectInRGSC,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = 1) 
 				if(selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
 			}
