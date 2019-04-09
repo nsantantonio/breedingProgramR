@@ -239,7 +239,7 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
     ptCol <- paste0(baseCols, "FF")
     polyCol <- paste0(baseCols, "4D")
 
-    if(!is.null(popLabs)) popLabs <- names(popList)
+    if(is.null(popLabs)) popLabs <- names(popList)
     # yr <- 1:nYr
     # RGSCyr <- yr * GScylcePerYr
     # RGSCgen <- c(0, 1:(nYr * GScylcePerYr))
