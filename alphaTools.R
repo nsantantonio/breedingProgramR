@@ -211,8 +211,7 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, popcol = "#000000", alp
 
 simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRUE, meanVariety = TRUE, legendPos = "topleft"){
     avgInGen <- function(x, xname) {
-		x
-    	ly <- length(x)
+    	lx <- length(x)
     	lapply(x, function(xx, l = lx) tapply(xx, rep(1:(length(xx)/lx), each = lx), mean))
 	}
 
