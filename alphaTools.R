@@ -27,7 +27,7 @@ getArgs <- function(defaultArgs = NULL) {
   argList[!needEval] <- lapply(argList[!needEval], function(x) strsplit(x, ",")[[1]])
   argList[!needEval] <- type.convert(argList[!needEval], as.is = TRUE)
   print(argList)
-  if(defaults){
+  if (defaults){
     defaultArgs[names(argList)] <- argList
     return(defaultArgs)
   } else {
@@ -38,11 +38,11 @@ getArgs <- function(defaultArgs = NULL) {
 # popList <- list(1, 2, list(3, 4, list(5, 6, list(7))), list(8, list(9, 10)))
 
 # cR <- function(popList){
-#   unlist(lapply(popList, function(x) if(is.list(x)) cR(x) else x), recursive = FALSE)
+#   unlist(lapply(popList, function(x) if (is.list(x)) cR(x) else x), recursive = FALSE)
 # }
 # cR(popList)
 
-mergePopsRec <- function(popList) mergePops(lapply(popList, function(x) if(is.list(x)) mergePopsRec(x) else x))
+mergePopsRec <- function(popList) mergePops(lapply(popList, function(x) if (is.list(x)) mergePopsRec(x) else x))
 
 
 h2toVe <- function(h2, Vg = 1) Vg * (1-h2) / h2
@@ -79,22 +79,22 @@ pullSegSites <- function(pop, returnMatrix = TRUE){
 		rowSums(xk)
 	}
 	geno <- lapply(pop@geno, function(x) t(apply(x, 3, rawToSum)))
-	if(returnMatrix) geno <- do.call(cbind, geno)
+	if (returnMatrix) geno <- do.call(cbind, geno)
 	geno
 }
 
 rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...){
 	args <- list(...)
-	if(counter < level){
+	if (counter < level){
 		do.call(lapply, c(list(X = l, FUN = rlapply, f = f, level = level, combine = combine, counter = counter + 1), args))
 	} else {
 		result <- do.call(lapply, c(list(X = l, FUN = f), args))
-		if(identical(combine, list)) return(result) else return(do.call(combine, result))
+		if (identical(combine, list)) return(result) else return(do.call(combine, result))
 	}
 }
 
 getSel <- function(selCrit, n) {
-  if(is.data.frame(selCrit)){
+  if (is.data.frame(selCrit)){
     selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
     sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
   } else {
@@ -117,7 +117,7 @@ simDHdist <- function(pop, GSfit, quant = 0.9, DHsampleSize = 200) {
 
 
 getPopMeanVar <- function(parVal, parCov, Vg){
-	if(ncol(parVal) > 1) stop("cannot use more than 1 trait...") 
+	if (ncol(parVal) > 1) stop("cannot use more than 1 trait...") 
 	pbar <- combn(parVal, 2, mean)
 	pCovar <- parCov[lower.tri(parCov)] * Vg
 	pVarSum <- combn(diag(parCov) * Vg, 2, sum) 
@@ -137,7 +137,7 @@ getExpDist <- function(pop, GSfit, quant, pullGeno = pullSnpGeno, Gvar = varA) {
 	rownames(parVal) <- pop@id
 	K <- vanRaden1(pullGeno(pop))
 	Vg <- Gvar(pop)
-	if(prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
+	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
   parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
   colnames(parents) <- c("p1", "p2")
   pE <- getPopMeanVar(parVal, K, Vg)
@@ -149,9 +149,9 @@ getExpDist <- function(pop, GSfit, quant, pullGeno = pullSnpGeno, Gvar = varA) {
 
 crossPlanFunc <- function(pop, nFam, famSize = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
 	allCrosses <- combn(pop@id, 2)
-	resample <- if(nFam > ncol(allCrosses)) TRUE else FALSE 
+	resample <- if (nFam > ncol(allCrosses)) TRUE else FALSE 
 	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
-	if(famSize > 1) crosses[, rep(1:nFam, each = famSize)]
+	if (famSize > 1) crosses[, rep(1:nFam, each = famSize)]
 	t(crosses)
 }
 
@@ -172,7 +172,7 @@ getPopStats <- function(resultL, meanVariety = FALSE){
     gvVariety <- lapply(VDPparam[["variety"]], function(x) x$gv_a + x$gv_mu)
     SDgRGSC <- sqrt(VgRGSC)
    
-    if(meanVariety){
+    if (meanVariety){
       Yvariety <- sapply(gvVariety, mean)
       Xvariety <- Ryr[1:length(Yvariety)]
     } else {
@@ -195,7 +195,7 @@ invertList <-  function(ll) {
     lapply(ll, function(X) X[!sapply(X, is.null)])
 }
 
-plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, vlinFit = FALSE, vCurve = FALSE, popcol = "#000000", alpha = "0D", alphaMean = "0D", ...){
+plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", alpha = "0D", alphaMean = "0D", ...){
 	polycol <- paste0(popcol, alphaMean)
 	popcol <- paste0(popcol, alpha)
 	# attach(simL)
@@ -205,32 +205,34 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = FALSE, vlinFit = FALSE, vCurve
 	polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
 	lines(x = Rgen, y = simL$gv, type = "l", col = popcol, lwd = 2)
 	points(simL$vx, simL$vy, col = popcol, ...)
-    if(vLine) lines(simL$vx, simL$vy, col = popcol, lwd = 2)
-	if(vlinFit) abline(lm(vy ~ vx, data = simL), col = popcol, lwd = 2)
-	if(vCurve) {
+    if (vLine == "linear") {
+		abline(lm(vy ~ vx, data = simL), col = popcol, lwd = 2)
+    } else if (vLine == "curve"){	
 		smoothFit <- loess(vy ~ vx, data = simL)
 		smx <- seq(min(simL$vx), max(simL$vx), by = 0.1)
 		lines(smx, predict(smoothFit, newdata = data.frame(vx = smx)), type = "l", col = popcol, lwd = 2)
-	}
+    } else if (vLine == "connect"){
+    	lines(simL$vx, simL$vy, col = popcol, lwd = 2)
+    }
 }
 
-simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRUE, meanVariety = TRUE, legendPos = "topleft"){
+simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = "none", meanVariety = TRUE, legendPos = "topleft"){
     avgInGen <- function(x, xname) {
     	lx <- length(x)
     	lapply(x, function(xx, l = lx) tapply(xx, rep(1:(length(xx)/lx), each = lx), mean))
 	}
 
-    if(length(baseCols) != length(popList)) stop("baseCols must be same length as popList!")
+    if (length(baseCols) != length(popList)) stop("baseCols must be same length as popList!")
     lineCol <- paste0(baseCols, "FF")
     ptCol <- paste0(baseCols, "FF")
     polyCol <- paste0(baseCols, "4D")
 
-    if(is.null(popLabs)) popLabs <- names(popList)
+    if (is.null(popLabs)) popLabs <- names(popList)
 
     GScylcePerYr <- popList[[1]][[1]][["paramL"]][["GScylcePerYr"]]
     simStats <- lapply(popList, function(x) lapply(x, function(xx) xx[!names(xx) %in% c("SP", "paramL")]))
     simStatsInv <- lapply(simStats, invertList)
-    if(meanVariety) for(i in 1:length(simStatsInv)) simStatsInv[[i]][c("vy", "vx")] <- lapply(simStatsInv[[i]][c("vy", "vx")], avgInGen)
+    if (meanVariety) for (i in 1:length(simStatsInv)) simStatsInv[[i]][c("vy", "vx")] <- lapply(simStatsInv[[i]][c("vy", "vx")], avgInGen)
     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
     simAvg <- rlapply(simReps, f = colMeans, level = 2, na.rm = TRUE)
 
@@ -243,12 +245,12 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = TRU
     plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 
-    for(i in 1:length(popList)){
+    for (i in 1:length(popList)){
     	invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = baseCols[i]))
     	plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
     }
 
-    if(length(popList) > 1) {
+    if (length(popList) > 1) {
         legend(legendPos, legend = popLabs, col=baseCols, lty = 1)
       } else {
         legend(legendPos, legend = c("RGSC mean", expression(paste('RGSC ', sigma[g])), "Variety mean"), 
