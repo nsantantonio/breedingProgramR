@@ -8,29 +8,32 @@ defArgs <- list(
 # simulation parameters
 	seed = 12345,
 	nThreads = 20, 
-	simName = "simNoTitle",
+	simName = "simNoTitlen",
 	simFunc = "fitFuncSingleVariate.R", 
 	nYr = 10,
 	reps = 10,
 	lgen = 5,
+	useTrue = FALSE,
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
 	simpleFounder = FALSE,
+	founderBurnIn = 3,
 # selection parameters
 	RGSCintensity = 0.2,
 	selectInRGSC = "ebv", # ebv, rand
 	selectOutRGSC = "ebv", # ebv, var, exp?
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
-	selFunc = NULL, #getExpDist,
+	selFuncOut = truncSel, #getExpDist,
+	selFuncIn = truncSel, #getExpDist,
 	withinFamInt = 1, # none, 
-	useQuantile = 0.9,
+	setXint = 0.9, # note that x is the cdf of a normal 
 	skip = NULL,
 # family parameters
-	nFounder = 10,
-	nNuclear = 20,
-	nFam = 10,
+	nFounder = 100,
+	nNuclear = 100,
+	nFam = 100,
 	famSize = 10,
 	ssd = FALSE,
 	selF2 = FALSE,
@@ -55,7 +58,7 @@ defArgs <- list(
 
 
 
-defArgs <- getArgs(defArgs)
+defArgs <- getComArgs(defArgs)
 attach(defArgs)
 
 # load libraries
