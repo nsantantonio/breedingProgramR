@@ -154,44 +154,46 @@ getSelfVar <- function(M, u, fdiff = NULL) {
 }
 
 # function to return expected quantiles from sampling DH individuals
-simDHdist <- function(pop, GSfit, retQuant = FALSE, quant = 0.9, n = 200) {
+# select individuals
+simDHdist <- function(pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200) {
 	DHdist <- function(i){
-		DH <- makeDH(pop[i], nDH = n)
+		DH <- makeDH(pop[i], nDH = nDH)
 		DH <- setEBV(DH, GSfit, simParam = simParam)
 		DHebv <- ebv(DH)
 		if(retQuant) quantile(DHebv, quant)[[1]] else var(DHebv)
 	}
 	sapply(pop@id, DHdist)
 }
+# select pairs
+simDHdistPairs <- function(pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200, nCrosses = 1, ...) {
+	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
+	colnames(parents) <- c("p1", "p2")
+	crosses <- rep(1:nrow(parents), each = nCrosses)
+	popX <- makeCross(pop, parents[crosses,])
 
-expDist <- function(pop, GSfit, quant, returnQuant = TRUE, sampleDH = FALSE, pullGeno = pullSnpGeno, Gvar = varA, updateEBV = FALSE, ...){
+	simVar <- simDHdist(popX, GSfit, retQuant = retQuant, quant = quant, nDH = nDH)
+	if(nCrosses > 1) simsd <- tapply(simVar, crosses, sd)
+	if(nCrosses > 1) simVar <- tapply(simVar, crosses, mean)
+
+	selCrit <- data.frame(parents, selCrit = simVar)
+}
+
+# select individuals
+expDist <- function(pop, GSfit, quant, returnQuant = TRUE, sampleDH = FALSE, pullGeno = pullSnpGeno, Gvar = varA, updateEBV = FALSE, w = 0.5, ...){
 	expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff, ...))
-	expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff))
+	# expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff))
 	
 	if(returnQuant) {
 		if(updateEBV) pop <- setEBV(pop, GSfit)
 		parVal <- ebv(pop)
-		x <- qnorm(quant, sd = sqrt(expVar))
-		expVar <- parVal + x * expVar
+		expVar <- w * parVal + (1-w) * qnorm(quant, sd = sqrt(expVar))
 	} # need top check why this seems to work so poorly...
 	if(ncol(expVar) == 1) expVar <- expVar[, 1]
 	expVar
 }
 
-expDistSel <- function(nSel, pop, GSfit, quant, nProgeny = 1, distFunc = expDist, pullGeno = pullSnpGeno, Gvar = varA, ...) {
-	expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant, ...))
-	expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant))
-	selection <- getSel(expVar, n = nSel)
-	if(is.data.frame(selection)){
-		selection <- makeCross(pop, crossPlan = selection) 
-	} else {
-		selection <- pop[selection]
-	}
-	selection
-}
-
-
-expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA) {
+# select pairs
+expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA, w = 0.5, ...) {
 	parVal <- ebv(pop)
 	rownames(parVal) <- pop@id
 	M <- pullGeno(pop)
@@ -202,12 +204,63 @@ expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, weightLoci = FAL
 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
 	colnames(parents) <- c("p1", "p2")
 	pE <- getPopMeanVar(parVal, K, Vg)
-	Eq <- pE$pbar + qnorm(quant, sd = sqrt(pE$crossvar)) # does this make sense?
+	Eq <- w * pE$pbar + (1-w) * qnorm(quant, sd = sqrt(pE$crossvar)) # does this make sense?
 	selCrit <- data.frame(parents, selCrit = Eq)
   # cor(pE$pbar, pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)))
 }
 
-truncSel <- function(pop, nSel, traits = 1, ...) selectInd(pop, nInd = nSel, trait = traits, ...)
+# select and cross
+expDistSel <- function(nSel, pop, GSfit, quant, nProgeny = 1, distFunc = expDist, pullGeno = pullSnpGeno, Gvar = varA, w = 0.5, ...) {
+	expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant, w = w, ...))
+	# expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant))
+	selection <- getSel(expVar, n = nSel)
+	if(is.data.frame(selection)){
+		if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+		selection <- makeCross(pop, crossPlan = selection) 
+	} else {
+		if(nProgeny > 1) selection <- rep(selection, each = nProgeny)
+		selection <- pop[selection]
+	}
+	selection
+}
+
+
+
+
+randCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
+	allCrosses <- combn(pop@id, 2)
+	resample <- if (nFam > ncol(allCrosses)) TRUE else FALSE 
+	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
+	if (famSize > 1) crosses[, rep(1:nFam, each = nProgeny)]
+	t(crosses)
+}
+
+# truncSel <- function(pop, nSel, traits = 1, ...) selectInd(pop, nInd = nSel, trait = traits, ...)
+
+selectInd2 <- function(pop, nSel, trait = 1, use = pheno, selFunc = identity){
+	sel <- use(pop)
+	names(sel) <- pop@id
+	selection <- getSel(selFunc(sel), n = nSel)
+	pop[selection]
+}
+
+truncSel <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) do.call(selectInd2, getArgs(selectInd2, pop = pop, nSel = nSel, trait = traits, ...))
+
+truncCross <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+	selPop <- do.call(selectInd2, getArgs(selectInd2, pop = pop, nSel = nSel, trait = traits, ...))
+	selection <- do.call(crossFunc, getArgs(crossFunc, pop = selPop, nFam = nSel, ...))
+	makeCross(pop, selection)
+}
+
+# trunc <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+# 	selPop <- do.call(selectInd, getArgs(selectInd, pop = pop, nInd = nSel, trait = traits, ...))
+# 	selection <- do.call(crossFunc, getArgs(crossFunc, pop = selPop, nFam = nSel, ...))
+# }
+
+# truncSel <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+# 	selection <- do.call(trunc, getArgs(trunc, pop = pop, nInd = nSel, trait = traits, ...))
+# 	makeCross(selPop, selection)
+# }
 
 # 	# rownames(parVal) <- pop@id
 # 	# M <- pullGeno(pop)
@@ -316,13 +369,6 @@ genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm
 
 
 
-randCross <- function(pop, nFam, famSize = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
-	allCrosses <- combn(pop@id, 2)
-	resample <- if (nFam > ncol(allCrosses)) TRUE else FALSE 
-	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
-	if (famSize > 1) crosses[, rep(1:nFam, each = famSize)]
-	t(crosses)
-}
 
 getPopStats <- function(resultL, meanVariety = FALSE){
     VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
