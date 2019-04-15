@@ -19,6 +19,28 @@ getPopStats <- function(pop, Ryr = RGSCyr, meanVariety = TRUE){
     return(list(Vg = VgRGSC, gv = gvRGSC, sd = SDgRGSC, vx = Xvariety, vy = Yvariety))
 }
 
+
+
+getPopStats <- function(pop, Ryr = RGSCyr, meanVariety = TRUE){
+    VgRGSC <- sapply(pop[["RGSC"]], genicVarG)
+    gvRGSC <- sapply(pop[["RGSC"]], function(x) mean(gv(x)))
+    # gvVariety <- sapply(run1[["VDP"]][["variety"]], function(x) mean(gv(x)))
+    gvVariety <- lapply(pop[["VDP"]][["variety"]], function(x) gv(x))
+    SDgRGSC <- sqrt(VgRGSC)
+   
+    # meanVariety <- TRUE
+    if(meanVariety){
+      Yvariety <- sapply(gvVariety, mean)
+      Xvariety <- Ryr[1:length(Yvariety)]
+    } else {
+      nVariety <- sapply(gvVariety, nrow)
+      Yvariety <- unlist(gvVariety)
+      Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety)
+    }
+
+    return(list(Vg = VgRGSC, gv = gvRGSC, sd = SDgRGSC, vx = Xvariety, vy = Yvariety))
+}
+
 getYrange <- function(simR) range(c(simR$gv + simR$sd, simR$gv - simR$sd, simR$vy))
 
 invertList <-  function(ll) {
