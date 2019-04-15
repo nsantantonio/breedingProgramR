@@ -1,8 +1,8 @@
 
 # save x quantile value!!!!!!!!!!!!
 # burn in RGSC random crosses CHECK
-# use mu + x sigma inside RGSC too! --> mu or mu + x sigma or x sigma
-# add truely traditional VDP -- how to do?
+# use mu + x sigma inside RGSC too! --> mu or mu + x sigma or x sigma # needs work!
+# add truely traditional VDP -- how to do? CHECK
 # x drops as VDP gets small -- CDF of normal distribution.
 # x as function of heritability and VDP size/intensity
 # VDP size relative to the heritability for fixed x
@@ -13,7 +13,7 @@
 
 
 # paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE
-sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE){
+sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, ...){
 	# parameter checks and warnings.
 	if (checkParam){
 		paramNames <- c("founderRData", "simFunc", "nThreads", "simName", "RGSCselect", "selF2", "nF2", 
@@ -50,10 +50,11 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	# define cycles
 	GScylce <- 1:GScylcePerYr
 
+	if(traditional) selectOut <- "pheno"
 	# if use true values
 	if(useTrue){
-		selectOutRGSC <- "bv"
-		selectInRGSC <- "bv"
+		selectOut <- "bv"
+		selectIn <- "bv"
 		gen0use <- "bv"
 		estIntFunc <- bv
 		returnVDPcrit <- "bv"
@@ -94,7 +95,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
-	# for (i in 1:6) { 
+	# for (i in 1:3) { 
 		# i = 1
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
@@ -107,16 +108,26 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			
 			# estimate VDP selection intensity from previous generations
 			if (i > nTrial) {
-				intensity[[gen(i)]] <- estIntensity(VDP, i, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = varA)
+				intensity[[gen(i)]] <- estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = varA)
 				if(is.null(setXint)) xInt <- pnorm(intensity[[gen(i)]]) 
 			}
 # need from here to ..
 			
-			# selGStoP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = selectOutRGSC)
-			selGStoP <- do.call(selFuncOut, getArgs(selFuncOut, ...))
-			
+			# use selected lines from last trial to make new crosses. Not sure this timeline is realistic...
+
+			if(traditional & i > 1) {
+				lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
+				selPop <- VDP[[lastVDPSel]][[length(VDP[[lastVDPSel]])]] 
+			} else {
+				selPop <- RGSC[[lastRGSCgen]]
+			}
+
+			# selToP <- selectInd(selPop, nInd = nFam, trait = 1, use = selectOut)
 			# select out of RGSC, on mean, expected quantile, etc...
-# ... here for a function, use here and in RGSC
+			selToP <- do.call(selFuncOut, getArgs(selFuncOut, pop = selPop, GSfit = GSmodel[[lastGSmodel]], 
+												  nSel = nFam, trait = 1, use = selectOut, quant = xInt, list(...)))
+			
+			# ... here for a function, use here and in RGSC
 
 			# Determine number of individuals to select within familiy (default is all)
 			nProgPerFam <- famSize / withinFamInt
@@ -127,7 +138,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			}
 
 			# make DH families or self
-			VDP[[trials[1]]][[gen(i)]] <- if (ssd) self(selGStoP, nProgeny = nProgPerFam) else makeDH(selGStoP, nDH = nProgPerFam)
+			VDP[[trials[1]]][[gen(i)]] <- if (ssd) self(selToP, nProgeny = nProgPerFam) else makeDH(selToP, nDH = nProgPerFam)
 
 			#select within family if intensity < 1
 			if (withinFamInt < 1) {
@@ -135,7 +146,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				fams <- split(1:(nProgPerFam * nFam), rep(1:nFam, each = nProgPerFam))
 				faml <- list()
 				for (j in names(fams)){
-					faml[[j]] <- selectInd(VDP[[trials[1]]][[gen(i)]][fams[[j]]], nInd = famSize, trait = 1, use = selectOutRGSC) 
+					faml[[j]] <- selectInd(VDP[[trials[1]]][[gen(i)]][fams[[j]]], nInd = famSize, trait = 1, use = selectOut) 
 				}
 				VDP[[trials[1]]][[gen(i)]] <- mergePops(faml)		
 			}
@@ -156,17 +167,23 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		}
 
 		if (i <= nYr){
+			# if(traditional) 
 			# run GS model to cycle through RGSC for year i
 			for (j in GScylce){
 				if (j != GScylce[1]) RGSC[[gen(j-1)]] <- setEBV(RGSC[[gen(j-1)]], GSmodel[[lastGSmodel]], simParam = simParam)
 				predAcc[["RGSC"]][[gen(j-1)]] <- getAcc(RGSC[[gen(j-1)]])
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = RGSC[[gen(j-1)]], nInd = round(RGSC[[gen(j-1)]]@nInd * RGSCintensity), 
-											   use = selectInRGSC,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = 1) # keep nprgeny = 1
+											   use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = 1) # keep nprgeny = 1
 				} else {
 					# note nSel and nNuclear are differnt. 
-					RGSC[[gen(j)]] <- selFuncIn(nSel = round(RGSC[[gen(j-1)]]@nInd * RGSCintensity), pop = RGSC[[gen(j-1)]], 
-												GSfit =  GSmodel[[lastGSmodel]], quant = xInt)
+					# 1. select nInd
+					# 2. cross nInd nCrosses times
+					# 3. nProgeny per cross
+					# RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, pop = RGSC[[gen(j-1)]], nSel = round(RGSC[[gen(j-1)]]@nInd * RGSCintensity,
+					# trait = 1,  use = selectIn,  trait = 1, list(...)))
+					RGSC[[gen(j)]] <- selectCross(pop = RGSC[[gen(j-1)]], nInd = round(RGSC[[gen(j-1)]]@nInd * RGSCintensity), 
+											   use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = 1) # keep nprgeny = 1
 				}
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
 			}

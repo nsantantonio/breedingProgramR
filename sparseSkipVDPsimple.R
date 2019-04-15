@@ -14,6 +14,7 @@ defArgs <- list(
 	reps = 10,
 	lgen = 5,
 	useTrue = FALSE,
+	traditional = FALSE, # this selects out of VDP as parents, no RGSC
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
@@ -21,11 +22,11 @@ defArgs <- list(
 	founderBurnIn = 3,
 # selection parameters
 	RGSCintensity = 0.2,
-	selectInRGSC = "ebv", # ebv, rand
-	selectOutRGSC = "ebv", # ebv, var, exp?
+	selectIn = "ebv", # ebv, rand
+	selectOut = "ebv", # ebv, var, exp?
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
-	selFuncOut = truncSel, #getExpDist,
+	selFuncOut = truncSel, #expDistSel,
 	selFuncIn = truncSel, #getExpDist,
 	withinFamInt = 1, # none, 
 	setXint = 0.9, # note that x is the cdf of a normal 
@@ -33,7 +34,7 @@ defArgs <- list(
 # family parameters
 	nFounder = 100,
 	nNuclear = 100,
-	nFam = 100,
+	nFam = 10,
 	famSize = 10,
 	ssd = FALSE,
 	selF2 = FALSE,

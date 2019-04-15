@@ -98,9 +98,9 @@ rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...
 	}
 }
 
-estIntensity <- function(VDP, i, start = "trial1", end = "variety", estFunc = pheno, Gvar = varA) {
-	S <- mean(pheno(VDP[[end]][[gen(i - nTrial)]])) - mean(pheno(VDP[[start]][[gen(i - nTrial)]]))
-	i <- S / sqrt(Gvar(VDP[[start]][[gen(i - nTrial)]]))
+estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = pheno, Gvar = varA) {
+	S <- mean(pheno(VDP[[end]][[gen(i - nT)]])) - mean(pheno(VDP[[start]][[gen(i - nT)]]))
+	i <- S / sqrt(Gvar(VDP[[start]][[gen(i - nT)]]))
 }
 
 
@@ -149,6 +149,7 @@ getSelfVar <- function(M, u, fdiff = NULL) {
 	H <- M == 1
 	Hu <- H %*% u^2 
 	if(!is.null(fdiff)) Hu <- Hu * (1 - 2^(-fdiff))
+	# if(ncol(Hu) == 1) Hu <- c(Hu)
 	Hu
 }
 
@@ -164,33 +165,37 @@ simDHdist <- function(pop, GSfit, retQuant = FALSE, quant = 0.9, n = 200) {
 }
 
 expDist <- function(pop, GSfit, quant, returnQuant = TRUE, sampleDH = FALSE, pullGeno = pullSnpGeno, Gvar = varA, updateEBV = FALSE, ...){
-		expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff, ...))
-		if(returnQuant) {
-			if(updateEBV) pop <- setEBV(pop, GSfit)
-			parVal <- ebv(pop)
-			x <- qnorm(quant, sd = sqrt(expVar))
-			expVar <- parVal + x * expVar
-		} # need top check why this seems to work so poorly...
-	}
+	expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff, ...))
+	expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff))
+	
+	if(returnQuant) {
+		if(updateEBV) pop <- setEBV(pop, GSfit)
+		parVal <- ebv(pop)
+		x <- qnorm(quant, sd = sqrt(expVar))
+		expVar <- parVal + x * expVar
+	} # need top check why this seems to work so poorly...
+	if(ncol(expVar) == 1) expVar <- expVar[, 1]
 	expVar
 }
 
-expDistSel <- function(nSel, pop, GSfit, quant, distFunc = expDistInd, pullGeno = pullSnpGeno, Gvar = varA, ...) {
-	# expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant, ...))
-	expVar <- distFunc(pop = pop, GSfit = GSfit, quant = quant, ...))
+expDistSel <- function(nSel, pop, GSfit, quant, nProgeny = 1, distFunc = expDist, pullGeno = pullSnpGeno, Gvar = varA, ...) {
+	expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant, ...))
+	expVar <- do.call(distFunc, getArgs(distFunc, pop = pop, GSfit = GSfit, quant = quant))
 	selection <- getSel(expVar, n = nSel)
 	if(is.data.frame(selection)){
 		selection <- makeCross(pop, crossPlan = selection) 
+	} else {
+		selection <- pop[selection]
 	}
 	selection
 }
 
 
-expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, pullGeno = pullSnpGeno, Gvar = varA) {
+expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA) {
 	parVal <- ebv(pop)
 	rownames(parVal) <- pop@id
 	M <- pullGeno(pop)
-	K <- genCov() else K <- genCov(M, u = c(GSfit@markerEff))
+	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(K)
 
 	Vg <- Gvar(pop)
 	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
@@ -202,7 +207,7 @@ expDistPairs <- function(pop, GSfit, quant, returnQuant = TRUE, pullGeno = pullS
   # cor(pE$pbar, pE$pbar + qnorm(1 - eSelInt, sd = sqrt(pE$crossvar)))
 }
 
-truncSel <- function(nSel, pop, traits = 1, ...) selectInd(pop, nInd = nSel, trait = traits, use = selectOutRGSC, ...)
+truncSel <- function(pop, nSel, traits = 1, ...) selectInd(pop, nInd = nSel, trait = traits, ...)
 
 # 	# rownames(parVal) <- pop@id
 # 	# M <- pullGeno(pop)
