@@ -19,7 +19,7 @@ getComArgs <- function(defaultArgs = NULL) {
   args <- commandArgs(TRUE)
   isAssn <- grepl("=", args)
   userArgs <- args[isAssn]
-  needEval <- grepl("\\(|\\)|\\:", userArgs) 
+  needEval <- grepl("\\(|\\)|\\:|\\'", userArgs) 
   argSplit <- strsplit(userArgs, "=")
   argList <- lapply(argSplit, "[[", 2)
   names(argList) <- lapply(argSplit, "[[", 1)
@@ -227,7 +227,7 @@ expDistSel <- function(nSel, pop, GSfit, quant, nProgeny = 1, distFunc = expDist
 
 
 
-randCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
+randomCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random sampler, to illustrate how one might build a function to pick pairs. 
 	allCrosses <- combn(pop@id, 2)
 	resample <- if (nFam > ncol(allCrosses)) TRUE else FALSE 
 	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
@@ -244,20 +244,20 @@ selectInd2 <- function(pop, nSel, trait = 1, use = pheno, selFunc = identity){
 	pop[selection]
 }
 
-truncSel <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) do.call(selectInd2, getArgs(selectInd2, pop = pop, nSel = nSel, trait = traits, ...))
+truncSel <- function(pop, nSel, crossFunc = randomCross, traits = 1, ...) do.call(selectInd2, getArgs(selectInd2, pop = pop, nSel = nSel, trait = traits, ...))
 
-truncCross <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+truncCross <- function(pop, nSel, crossFunc = randomCross, traits = 1, ...) {
 	selPop <- do.call(selectInd2, getArgs(selectInd2, pop = pop, nSel = nSel, trait = traits, ...))
 	selection <- do.call(crossFunc, getArgs(crossFunc, pop = selPop, nFam = nSel, ...))
 	makeCross(pop, selection)
 }
 
-# trunc <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+# trunc <- function(pop, nSel, crossFunc = randomCross, traits = 1, ...) {
 # 	selPop <- do.call(selectInd, getArgs(selectInd, pop = pop, nInd = nSel, trait = traits, ...))
 # 	selection <- do.call(crossFunc, getArgs(crossFunc, pop = selPop, nFam = nSel, ...))
 # }
 
-# truncSel <- function(pop, nSel, crossFunc = randCross, traits = 1, ...) {
+# truncSel <- function(pop, nSel, crossFunc = randomCross, traits = 1, ...) {
 # 	selection <- do.call(trunc, getArgs(trunc, pop = pop, nInd = nSel, trait = traits, ...))
 # 	makeCross(selPop, selection)
 # }

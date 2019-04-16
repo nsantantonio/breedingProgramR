@@ -10,11 +10,11 @@ defArgs <- list(
 	nThreads = 20, 
 	simName = "simNoTitlen",
 	simFunc = "fitFuncSingleVariate.R", 
-	nYr = 10,
+	nYr = 20,
 	reps = 10,
 	lgen = 5,
 	useTrue = FALSE,
-	traditional = FALSE, # this selects out of VDP as parents, no RGSC
+	traditional = TRUE, # this selects out of VDP as parents, no RGSC
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
@@ -30,16 +30,16 @@ defArgs <- list(
 	selFuncOut = truncSel, #expDistSel,
 	selFuncIn = truncCross, #getExpDist,
 	withinFamInt = 1, # none, 
-	setXint = 0.9, # note that x is the cdf of a normal 
+	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 # family parameters
 	nFounder = 100,
 	nNuclear = 100,
 	nFam = 10,
-	famSize = 10,
+	famSize = 50,
 	ssd = FALSE,
 	selF2 = FALSE,
-	nF2 = 10,
+	nF2 = 1,
 # genetic parameters
 	# kinship = "SNP",
 	Vg = 1,
@@ -68,6 +68,9 @@ library(AlphaSimR)
 library(doMC)
 library(txtplot) 
 # source(paramFile)
+
+print(getwd())
+
 source(simFunc)
 
 

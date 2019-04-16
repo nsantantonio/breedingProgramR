@@ -105,7 +105,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	if (selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	
-	xInt <- if(!is.null(setXint)) setXint else 1 - selectTrials[nTrial] / selectTrials[1]
+	xInt <- if(is.null(setXint)) 1 - selectTrials[nTrial] / selectTrials[1] else setXint 
 	if(verbose) cat("Estimated selection intensity:", qnorm(xInt, sd = sqrt(Vg)), "\n")
 
 	# pop <- RGSC[[gen(0)]]; GSfit <- GSmodel[[gen(0)]]
@@ -211,6 +211,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, pop = selPop, nSel = selectRGSCi,
 					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = RGSCprogenyPerCross))
 				}
+				# would be good to be able to select within f2 family if f2 > 1
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
 			}
 			# update GScycle number
