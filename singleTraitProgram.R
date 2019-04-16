@@ -7,8 +7,8 @@ source(paste0(parDir, "/alphaTools.R"))
 defArgs <- list(
 # simulation parameters
 	seed = 12345,
-	nThreads = 20, 
-	simName = "simNoTitlen",
+	nThreads = 11, 
+	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
 	nYr = 20,
 	reps = 10,
@@ -120,9 +120,9 @@ Reduce(intersect, loci)
 
 if(system("hostname", intern = TRUE) == "Bender") {
 	setMKLthreads(1)
-	registerDoMC(reps * 2)
+	registerDoMC(nThreads)
 } else {
-	registerDoMC(reps * 2)
+	registerDoMC(nThreads)
 }
 
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
