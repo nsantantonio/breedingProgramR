@@ -14,7 +14,7 @@ defArgs <- list(
 	reps = 10,
 	lgen = 5,
 	useTrue = FALSE,
-	traditional = TRUE, # this selects out of VDP as parents, no RGSC
+	traditional = FALSE, # this selects out of VDP as parents, no RGSC
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
