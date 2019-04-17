@@ -69,12 +69,13 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		returnVDPcrit <- "bv"
 		selectVDP <- "bv"
 		useGS <- "bv"
+		pullGenoFunc <- pullQtlGeno
 	} else {
 		gen0use <- "pheno"
 		estIntFunc <- pheno
 		useGS <- "pheno"
+		pullGenoFunc <- pullSnpGeno
 	}
-
 
 	# define cycles
 	cycle <- 1:cyclePerYr
@@ -113,11 +114,13 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
-	# for (i in 1:3) { 
-		# i = 2
+	# for (i in 1:6) { 
+		# i = 1
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
 		selectRGSCi <- if(deltaRGSC) selectRGSC[i] else selectRGSC[1]
+		# nProgenyPerCrossIni <- if(identical(expDistPairs, selFuncIn)) nNuclear / selectRGSCi  * nProgenyPerCrossIn else nProgenyPerCrossIn
+
 		
 		if (i <= nYr){ 
 			if (verbose) cat("    Year: ", i, "\n")
@@ -144,9 +147,10 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			}
 						# selToP <- selectInd(selPop, nInd = nFam, trait = 1, use = selectOut)
 			# select out of RGSC, on mean, expected quantile, etc...
-			selToP <- do.call(selFuncOut, getArgs(selFuncOut, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-												  nSel = nFam, trait = 1, use = selectOut, quant = xInt))
-
+			selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
+												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
+												  pullGeno = pullGenoFunc, ...))
+			if(nInd(selToP) != nFam) stop("selToP is wrong...")
 			# selToP <- do.call(selFuncOut, getArgs(selFuncOut, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 			# 									  nSel = nFam, trait = 1, use = selectOut, quant = xInt, list(...)))
 			
@@ -173,6 +177,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			}
 			# # print mean genotypic value of DH 
 			# if (verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
+			if(nInd(VDP[[trials[1]]][[gen(i)]]) != nFam * nProgPerFam) stop("selToP is wrong...")
 		}
 
 		# get generation indices
@@ -202,14 +207,11 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = selectRGSCi, use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = RGSCprogenyPerCross) # keep nprgeny = 1
 				} else {
-					# note nSel and nNuclear are different. 
-					# 1. select nInd
-					# 2. cross nInd nCrosses times
-					# 3. nProgeny per cross
-					# RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, pop = selPop, nSel = selectRGSCi,
-					# trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = RGSCprogenyPerCross, list(...)))
-					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, pop = selPop, nSel = selectRGSCi,
-					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = RGSCprogenyPerCross))
+					# if(identical(expDistPairs, selFuncIn)) nProgenyPerCrossIn <- nNuclear / selectRGSCi  * nProgenyPerCrossIn 
+					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
+					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
+					pullGeno = pullGenoFunc, ...))
+					if(nInd(RGSC[[gen(j)]]) != nNuclear) browser()#stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)

@@ -15,6 +15,7 @@ defArgs <- list(
 	lgen = 5,
 	useTrue = FALSE,
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
+	nSimCrosses = 10, 
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
@@ -22,13 +23,14 @@ defArgs <- list(
 	founderBurnIn = 3,
 # selection parameters
 	selectRGSC = 0.2,
-	RGSCprogenyPerCross = 1,
+	nProgenyPerCrossIn = 1,
+	nProgenyPerCrossOut = 1,
 	selectIn = "ebv", # ebv, rand
 	selectOut = "ebv", # ebv, var, exp?
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
-	selFuncOut = truncSel, #expDistSel,
-	selFuncIn = truncCross, #getExpDist,
+	selFuncOut = truncSel, # truncSel, expDist, simDHdist
+	selFuncIn = expDistPairs, # truncCross, expDistPairs, simDHdistPairs
 	withinFamInt = 1, # none, 
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
@@ -36,7 +38,7 @@ defArgs <- list(
 	nFounder = 100,
 	nNuclear = 100,
 	nFam = 10,
-	famSize = 50,
+	famSize = 20,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 1,
@@ -57,6 +59,9 @@ defArgs <- list(
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
 )
+
+
+# expDist and truncCross seemed to do well earlier. Need to rerun and check. 
 
 
 
@@ -116,7 +121,15 @@ SP$addSnpChip(nM)
 loci <- pullLoci(SP)
 Reduce(intersect, loci)
 
-# run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
+# why does expDistPairs fail even when w = 1??!!!!
+run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
+run1$gv
+variety <- nFam * famSize * cumprod(selectTrials)
+nv <- variety[length(variety)]
+tapply(run1$vy, rep(1:nYr, each = nv), mean)
+
+run1$Vg
+
 
 if(system("hostname", intern = TRUE) == "Bender") {
 	setMKLthreads(1)
