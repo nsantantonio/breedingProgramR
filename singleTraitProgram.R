@@ -30,15 +30,15 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = truncSel, # truncSel, expDist, simDHdist
-	selFuncIn = expDistPairs, # truncCross, expDistPairs, simDHdistPairs
+	selFuncIn = truncCross, # truncCross, expDistPairs, simDHdistPairs
 	withinFamInt = 1, # none, 
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 # family parameters
-	nFounder = 100,
+	nFounder = 10,
 	nNuclear = 100,
 	nFam = 10,
-	famSize = 20,
+	famSize = 50,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 1,
@@ -59,10 +59,6 @@ defArgs <- list(
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
 )
-
-
-# expDist and truncCross seemed to do well earlier. Need to rerun and check. 
-
 
 
 defArgs <- getComArgs(defArgs)
@@ -122,13 +118,13 @@ loci <- pullLoci(SP)
 Reduce(intersect, loci)
 
 # why does expDistPairs fail even when w = 1??!!!!
-run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
-run1$gv
-variety <- nFam * famSize * cumprod(selectTrials)
-nv <- variety[length(variety)]
-tapply(run1$vy, rep(1:nYr, each = nv), mean)
+# run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
+# run1$gv
+# variety <- nFam * famSize * cumprod(selectTrials)
+# nv <- variety[length(variety)]
+# tapply(run1$vy, rep(1:nYr, each = nv), mean)
 
-run1$Vg
+# run1$Vg
 
 
 if(system("hostname", intern = TRUE) == "Bender") {
