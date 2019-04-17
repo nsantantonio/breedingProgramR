@@ -13,7 +13,7 @@ defArgs <- list(
 	nYr = 20,
 	reps = 10,
 	lgen = 5,
-	useTrue = FALSE,
+	useTrue = TRUE,
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
 	nSimCrosses = 10, 
 # founder parameters
@@ -34,6 +34,7 @@ defArgs <- list(
 	withinFamInt = 1, # none, 
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
+	weight = 0.5,
 # family parameters
 	nFounder = 10,
 	nNuclear = 100,
@@ -136,5 +137,5 @@ if(system("hostname", intern = TRUE) == "Bender") {
 
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
-simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
+simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = weight)
 save(simrun, SP, file = paste0("results/", simName, "/", simName, ".RData"))

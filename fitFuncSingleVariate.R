@@ -149,7 +149,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# select out of RGSC, on mean, expected quantile, etc...
 			selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
-												  pullGeno = pullGenoFunc, ...))
+												  pullGeno = pullGenoFunc, w = weight, ...))
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
 			# selToP <- do.call(selFuncOut, getArgs(selFuncOut, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 			# 									  nSel = nFam, trait = 1, use = selectOut, quant = xInt, list(...)))
@@ -210,7 +210,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 					# if(identical(expDistPairs, selFuncIn)) nProgenyPerCrossIn <- nNuclear / selectRGSCi  * nProgenyPerCrossIn 
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
 					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
-					pullGeno = pullGenoFunc, ...))
+					pullGeno = pullGenoFunc, w = weight, ...))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) browser()#stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
