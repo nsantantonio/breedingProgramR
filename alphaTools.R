@@ -108,7 +108,8 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 
 
 getSel <- function(selCrit, n) {
-	if(nrow(selCrit) < n) n <- nrow(selCrit)
+	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
+	if(len < n) n <- nrow(selCrit)
 	if (is.data.frame(selCrit)){
 		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
 		sel <- as.matrix(selCrit[1:n, c("p1", "p2")])

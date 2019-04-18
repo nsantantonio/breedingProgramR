@@ -137,5 +137,5 @@ if(system("hostname", intern = TRUE) == "Bender") {
 
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
-simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = weight)
+simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 save(simrun, SP, file = paste0("results/", simName, "/", simName, ".RData"))
