@@ -8,12 +8,13 @@ defArgs <- list(
 # simulation parameters
 	seed = 12345,
 	nThreads = 11, 
+	projName = NULL, 
 	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
 	nYr = 20,
 	reps = 10,
 	lgen = 5,
-	useTrue = TRUE,
+	useTrue = FALSE,
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
 	nSimCrosses = 10, 
 # founder parameters
@@ -78,9 +79,9 @@ source(simFunc)
 
 nFam * famSize * cumprod(selectTrials)
 
-
+if(!is.null(projName)) projName <- paste0(projName, "/")
 # make directory to store all results
-simDir <- paste0(parDir, "/results/", simName) 
+simDir <- paste0(parDir, "/results/", projName, simName) 
 system(paste0("simdir=", simDir, "
 if [ ! -d $simdir ]; then
 	mkdir -p $simdir
