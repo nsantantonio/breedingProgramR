@@ -119,6 +119,19 @@ getSel <- function(selCrit, n) {
 	sel
 }
 
+getSelLim <- function(selCrit, n) {
+	# add inbreeding limits here!
+	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
+	if(len < n) n <- nrow(selCrit)
+	if (is.data.frame(selCrit)){
+		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
+		sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
+	} else {
+		sel <- names(sort(selCrit, decreasing = TRUE))[1:n]
+	}
+	sel
+}
+
 getTrueQTLeff <- function(simParam, trait = 1) simParam$traits[[trait]]@addEff 
 
 getTrueBV <- function(pop, simParam, trait = 1) {
@@ -481,7 +494,7 @@ genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm
 
 
 
-getPopStats <- function(resultL, meanVariety = FALSE){
+getPopStats <- function(resultL, meanVariety = TRUE){
     VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
     RGSCparam <- lapply(resultL[["RGSC"]], genParam)
     # pop <- list(RGSC = RGSCparam, VDP = VDPparam)
@@ -533,37 +546,54 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", al
 	points(simL$vx, simL$vy, col = popcol, pch = pch)
     if (vLine == "linear") {
 		abline(with(simL, lm(vy ~ vx)), col = popcol, lwd = 2)
-    } else if (vLine == "curve"){	
-		smoothFit <- with(simL, loess(vy ~ vx)) # this is super annoying... why doesnt work with data = ?????
+    } else if (vLine %in% c("poly", "curve")){	    	
+    	fit <- if(vLine == "poly") with(simL, lm(vy ~ poly(vx, 2))) else with(simL, loess(vy ~ vx))
 		smx <- seq(min(simL$vx), max(simL$vx), by = 0.1)
-		lines(smx, predict(smoothFit, newdata = data.frame(vx = smx)), type = "l", col = popcol, lwd = 1)
+		lines(smx, predict(fit, newdata = data.frame(vx = smx)), type = "l", col = popcol, lwd = 1)
+  #   } else if (vLine == "curve"){	
+		# smoothFit <- with(simL, loess(vy ~ vx)) # this is super annoying... why doesnt work with data = ?????
+		# smx <- seq(min(simL$vx), max(simL$vx), by = 0.1)
+		# lines(smx, predict(smoothFit, newdata = data.frame(vx = smx)), type = "l", col = popcol, lwd = 1)
     } else if (vLine == "connect"){
     	lines(simL$vx, simL$vy, col = popcol, lwd = 2)
     }
 }
 
-simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = "none", meanVariety = TRUE, legendPos = "topleft"){
-    avgInGen <- function(x, lx) lapply(x, function(xx, len = lx) tapply(xx, rep(1:(length(xx)/len), each = len), mean))
 
-    if (length(baseCols) != length(popList)) stop("baseCols must be same length as popList!")
-    lineCol <- paste0(baseCols, "FF")
-    ptCol <- paste0(baseCols, "FF")
-    polyCol <- paste0(baseCols, "4D")
+plotIntensity <- function(simL){
+	 getIntensity <- function(x) {
+	    S <- x$vy - x$gv[x$RGSCyr]
+		i <- S / x$Vg[x$RGSCyr]
+		list(S = S, i = i)
+	}
+    xInt <- getIntensity(simL)
+    lines(xInt$S, simL$vy, type = "l")
+}
+
+# popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE
+simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = TRUE, legendPos = "topleft", plotReps = FALSE){
+    avgInGen <- function(x) lapply(x, function(xx) tapply(xx, rep(1:(length(xx)/ nVar), each = nVar), mean))
+
+    if (length(cols) != length(popList)) stop("cols must be same length as popList!")
+    lineCol <- paste0(cols, "FF")
+    ptCol <- paste0(cols, "FF")
+    polyCol <- paste0(cols, "4D")
 
     if (is.null(popLabs)) popLabs <- names(popList)
 
+  	nVar <- tail(with(popList[[1]][[1]][["paramL"]], nFam * famSize * cumprod(selectTrials)), 1)
     cyclePerYr <- popList[[1]][[1]][["paramL"]][["cyclePerYr"]]
     simStats <- lapply(popList, function(x) lapply(x, function(xx) xx[!names(xx) %in% c("SP", "paramL")]))
 	# this is fucking hacky.................... UGH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (meanVariety) {
     	for (i in 1:length(simStats)) {
-    		l <- length(simStats[[i]])
-    		for (j in 1:l) simStats[[i]][[j]][c("vy", "vx")] <- avgInGen(simStats[[i]][[j]][c("vy", "vx")], l)
+    		for (j in 1:length(simStats[[i]])) simStats[[i]][[j]][c("vy", "vx")] <- avgInGen(simStats[[i]][[j]][c("vy", "vx")])
     	}
     }
     simStatsInv <- lapply(simStats, invertList)
     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
     simAvg <- rlapply(simReps, f = colMeans, level = 2, na.rm = TRUE)
+    seel(simAvg)
 
     RGSCyr <- simAvg[[1]][["RGSCyr"]]
     RGSCgen <- simAvg[[1]][["Rcyc"]]
@@ -571,16 +601,17 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = "no
     xlims <- range(c(0, RGSCgen))
     ylims <- range(sapply(simReps, getYrange)) * 1.1
 
+    # plot means of RGSC and VDP output
     plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 
     for (i in 1:length(popList)){
-    	invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = baseCols[i]))
-    	plotPop(simAvg[[i]], popcol = baseCols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
+    	if(plotReps) invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = cols[i]))
+    	plotPop(simAvg[[i]], popcol = cols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
     }
 
     if (length(popList) > 1) {
-        legend(legendPos, legend = popLabs, col=baseCols, lty = 1, lwd = 2)
+        legend(legendPos, legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
       } else {
         legend(legendPos, legend = c("RGSC mean", expression(paste('RGSC ', sigma[g])), "Variety mean"), 
          bty = "n",
@@ -590,6 +621,17 @@ simPlot <- function(popList, baseCols = "#000000", popLabs = NULL, varLine = "no
          pt.bg = c(NA, polyCol, ptCol),
         )
 	}
+	
+
+
+	# plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
+ #    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+
+ #    for (i in 1:length(popList)){
+ #    	if(plotReps) invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = cols[i]))
+ #    	plotPop(simAvg[[i]], popcol = cols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
+ #    }
+
 }
 
 
