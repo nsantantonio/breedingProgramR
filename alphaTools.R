@@ -1,19 +1,3 @@
-# getArgs <- function(defaultArgs) {
-#   args <- commandArgs(TRUE)
-#   isAssn <- grepl("=", args)
-#   userArgs <- args[isAssn]
-#   needEval <- grepl("\\(|\\)|\\:", userArgs) 
-#   argSplit <- strsplit(userArgs, "=")
-#   argList <- lapply(argSplit, "[[", 2)
-#   names(argList) <- lapply(argSplit, "[[", 1)
-#   argList[needEval] <- lapply(argList[needEval], function(x) eval(parse(text = x)))
-#   argList[!needEval] <- lapply(argList[!needEval], function(x) strsplit(x, ",")[[1]])
-#   argList[!needEval] <- type.convert(argList[!needEval], as.is = TRUE)
-#   print(argList)
-#   defaultArgs[names(argList)] <- argList
-#   defaultArgs
-# }
-
 getComArgs <- function(defaultArgs = NULL) {
   defaults <- !is.null(defaultArgs)
   args <- commandArgs(TRUE)
@@ -116,7 +100,6 @@ getSel <- function(selCrit, n, high = TRUE) {
 	} else {
 		sel <- names(sort(selCrit, decreasing = high))[1:n]
 	}
-	if(verbose)
 	sel
 }
 
@@ -594,7 +577,7 @@ getIntensity <- function(x) {
 #     legend("topright", legend = c("Vg", "S"), lty = c(1, 2))
 # }
 
-# popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE
+# popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE; plotVg = TRUE; plotSelInt = TRUE
 simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = FALSE, legendPos = "topleft", plotReps = FALSE, plotVg = TRUE, plotSelInt = TRUE){
     avgInGen <- function(x) lapply(x, function(xx) tapply(xx, rep(1:(length(xx)/ nVar), each = nVar), mean))
 
@@ -644,17 +627,16 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
          pt.bg = c(NA, polyCol, ptCol),
         )
 	}
-	
 	if(plotVg){
 		ylims2 <- c(0, max(sapply(simAvg, "[[", "Vg")))
 		plot(NA, xlim = xlims, ylim = ylims2, xaxt = "n", xlab = "generation", ylab = "Vg", main = "Genetic variance across generations")
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    for (i in 1:length(simAvg)) {
-	    	print(simAvg[[i]][["Vg"]])
 	    	lines(simAvg[[i]][["Rcyc"]], simAvg[[i]][["Vg"]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
 	    }	
 	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 	}
+
 	if(plotSelInt){
 		selInt <- lapply(simAvg, getIntensity)
 		S <- lapply(selInt, "[[", "S")
@@ -675,7 +657,6 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    
 	    for (i in 1:length(int)) {
-	    	print(int[[i]])
 	    	lines(RGSCyr, int[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
 	    }
 	    legend("topleft", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
