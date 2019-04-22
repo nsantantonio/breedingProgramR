@@ -107,27 +107,28 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 
 
 
-getSel <- function(selCrit, n) {
+getSel <- function(selCrit, n, high = TRUE) {
 	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
 	if(len < n) n <- nrow(selCrit)
 	if (is.data.frame(selCrit)){
-		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
+		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = high), ]
 		sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
 	} else {
-		sel <- names(sort(selCrit, decreasing = TRUE))[1:n]
+		sel <- names(sort(selCrit, decreasing = high))[1:n]
 	}
+	if(verbose)
 	sel
 }
 
-getSelLim <- function(selCrit, n) {
+getSelLim <- function(selCrit, n, high = TRUE) {
 	# add inbreeding limits here!
 	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
 	if(len < n) n <- nrow(selCrit)
 	if (is.data.frame(selCrit)){
-		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = TRUE), ]
+		selCrit <- selCrit[order(selCrit[["selCrit"]], decreasing = high), ]
 		sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
 	} else {
-		sel <- names(sort(selCrit, decreasing = TRUE))[1:n]
+		sel <- names(sort(selCrit, decreasing = high))[1:n]
 	}
 	sel
 }
@@ -310,15 +311,34 @@ expDist <- function(nSel, pop, GSfit, quant, returnQuant = TRUE, pullGeno = pull
 	pop[selection]
 }
 
+maxVar <- function(pop, GSfit, nCrosses, truncPop = 1, weightLoci = FALSE){
+	nCombos <- choose(nInd(pop) * truncPop, 2)
+	nEx <- if(nCombos <  nCrosses) ceiling(nCombos / nSel) else 1
+	
+	parVal <- ebv(pop)
+	rownames(parVal) <- pop@id
+	if(truncPop < 1) pop <- selectInd(pop, nInd = nInd(pop) * truncPop, use = "ebv")
+	M <- pullGeno(pop)
+	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
+	covL <- data.frame(which(lower.tri(K), arr.ind = TRUE), val = K[lower.tri(K)])
+	covL <- data.frame(covL, p1 = colnames(K)[covL$col], p2 = colnames(K)[covL$row]) 
+	getSel(covL, n = nCrosses, high = FALSE)
+	covL <- covL[order(covL$val), ]
+}
+
+
 # select pairs
+# nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
+# returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = varA; w = 0.5; nProgeny = 1
 expDistPairs <- function(nSel, pop, GSfit, quant, nCrosses, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA, w = 0.5, nProgeny = 1, ...) {
 	nCombos <- choose(nInd(pop), 2) 
-	nEx <- if(nCombos < nCrosses) ceiling(nCombos / nSel) else 1
+	nEx <- if(nCombos < nCrosses) ceiling(nCombos / nSel) else 1 # check this! is nSel right here?
 	
 	parVal <- ebv(pop)
 	rownames(parVal) <- pop@id
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
+	# txtdensity(K[lower.tri(K)])
 
 	Vg <- Gvar(pop)
 	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
@@ -560,18 +580,22 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", al
 }
 
 
-plotIntensity <- function(simL){
-	 getIntensity <- function(x) {
-	    S <- x$vy - x$gv[x$RGSCyr]
-		i <- S / x$Vg[x$RGSCyr]
-		list(S = S, i = i)
-	}
-    xInt <- getIntensity(simL)
-    lines(xInt$S, simL$vy, type = "l")
+getIntensity <- function(x) {
+    S <- x$vy - x$gv[x$RGSCyr]
+	i <- S / x$Vg[x$RGSCyr]
+	list(S = S, i = i)
 }
 
+# plotIntensity <- function(simL, x, popcol = "#000000"){
+
+#     xInt <- getIntensity(simL)
+#     lines(simL$Rcyc, simL$Vg, type = "l", lty = 1, col = popcol)
+#     lines(simL$RGSCyr, xInt$S, type = "l", lty = 2, col = popcol)
+#     legend("topright", legend = c("Vg", "S"), lty = c(1, 2))
+# }
+
 # popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE
-simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = TRUE, legendPos = "topleft", plotReps = FALSE){
+simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = FALSE, legendPos = "topleft", plotReps = FALSE, plotVg = TRUE, plotSelInt = TRUE){
     avgInGen <- function(x) lapply(x, function(xx) tapply(xx, rep(1:(length(xx)/ nVar), each = nVar), mean))
 
     if (length(cols) != length(popList)) stop("cols must be same length as popList!")
@@ -593,7 +617,6 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
     simStatsInv <- lapply(simStats, invertList)
     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
     simAvg <- rlapply(simReps, f = colMeans, level = 2, na.rm = TRUE)
-    seel(simAvg)
 
     RGSCyr <- simAvg[[1]][["RGSCyr"]]
     RGSCgen <- simAvg[[1]][["Rcyc"]]
@@ -622,16 +645,41 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
         )
 	}
 	
+	if(plotVg){
+		ylims2 <- c(0, max(sapply(simAvg, "[[", "Vg")))
+		plot(NA, xlim = xlims, ylim = ylims2, xaxt = "n", xlab = "generation", ylab = "Vg", main = "Genetic variance across generations")
+	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+	    for (i in 1:length(simAvg)) {
+	    	print(simAvg[[i]][["Vg"]])
+	    	lines(simAvg[[i]][["Rcyc"]], simAvg[[i]][["Vg"]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    }	
+	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
+	}
+	if(plotSelInt){
+		selInt <- lapply(simAvg, getIntensity)
+		S <- lapply(selInt, "[[", "S")
+		int <- lapply(selInt, "[[", "i")
+		ylims3 <- range(unlist(S))
+		# ylims4 <- range(unlist(int))
+		ylims4 <- c(-2, max(unlist(int)))
 
+		plot(NA, xlim = xlims, ylim = ylims3, xaxt = "n", xlab = "generation", ylab = "S", main = "Selection differential across generations")
+	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+	    
+	    for (i in 1:length(S)) {
+	    	lines(RGSCyr, S[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    }	
+	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 
-	# plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
- #    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
-
- #    for (i in 1:length(popList)){
- #    	if(plotReps) invisible(lapply(simStats[[i]], plotPop, Rgen = RGSCgen, popcol = cols[i]))
- #    	plotPop(simAvg[[i]], popcol = cols[i], alpha = "FF", alphaMean = "4D", Rgen = RGSCgen, vLine = varLine, pch = 16)
- #    }
-
+	   	plot(NA, xlim = xlims, ylim = ylims4, xaxt = "n", xlab = "generation", ylab = "S/Vg", main = "Selection intensity across generations")
+	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+	    
+	    for (i in 1:length(int)) {
+	    	print(int[[i]])
+	    	lines(RGSCyr, int[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    }
+	    legend("topleft", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
+	}
 }
 
 
