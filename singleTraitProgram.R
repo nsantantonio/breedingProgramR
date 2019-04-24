@@ -31,7 +31,7 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = truncSel, # truncSel, expDist, simDHdist
-	selFuncIn = truncCross, # truncCross, expDistPairs, simDHdistPairs
+	selFuncIn = truncCross, # truncCross, expDistPairs, simDHdistPairs, maxVar
 	withinFamInt = 1, # none, 
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,

@@ -13,8 +13,8 @@
 
 
 
-# paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE
-sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, ...){
+# paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP
+sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = RRBLUP, ...){
 	# parameter checks and warnings.
 	if (checkParam){
 		paramNames <- c("founderRData", "simFunc", "nThreads", "simName", "RGSCselect", "selF2", "nF2", 
@@ -102,7 +102,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		if(printBurnin) printBurnin <- FALSE
 	}
 	# train GS model and set EBV (after selfing if ssd)
-	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue)
+	GSmodel[[gen(0)]] <- GSfunc(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue)
 	if (selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	
@@ -151,8 +151,6 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
 												  pullGeno = pullGenoFunc, w = weight, ...))
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
-			# selToP <- do.call(selFuncOut, getArgs(selFuncOut, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-			# 									  nSel = nFam, trait = 1, use = selectOut, quant = xInt, list(...)))
 			
 			# Determine number of individuals to select within familiy (default is all)
 			nProgPerFam <- famSize / withinFamInt
@@ -211,7 +209,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
 					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
 					pullGeno = pullGenoFunc, w = weight, ...))
-					if(nInd(RGSC[[gen(j)]]) != nNuclear) browser()#stop("nNuclear isnt right...")
+					if(nInd(RGSC[[gen(j)]]) != nNuclear) stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
@@ -226,7 +224,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# concatenate training set and train GS model
 	 		train <- mergePopsRec(trnSet) 
 			cat("training set has ", train@nInd, "individuals...\n")	
-			GSmodel[[gen(i)]] <- RRBLUP(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
+			GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
 		} 
 		# check if final year
 		if (i - nYr == 1) cat("\nFinal year reached, selecting on phenotypes / ebv trained with last year training set ...\n")
@@ -264,5 +262,5 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	}
 
 	rL <- list(SP = SP, paramL = paramL, RGSC = RGSC, VDP = VDP, GSmodel = GSmodel, predAcc = predAcc, selIntensity = intensity)
-	returnFunc(rL)
+	do.call(returnFunc, getArgs(returnFunc, resultL = rL, ...))
 }
