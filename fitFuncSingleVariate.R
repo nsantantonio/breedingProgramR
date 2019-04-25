@@ -97,7 +97,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	while (nFam > nInd(RGSC[[gen(0)]]) | founderBurnIn > 0) {
 		if(nFam > nInd(RGSC[[gen(0)]]) & verbose) cat("nFounder < nFam. Random mating to make nFam parents...\n")
 		if(printBurnin & founderBurnIn > 0 & verbose) cat("Running", founderBurnIn, "burn-in cycles of random mating...\n")
-		RGSC[[gen(0)]] <- selectCross(RGSC[[gen(0)]], nInd = nInd(RGSC[[gen(0)]]), use = "rand", simParam = simParam, nCrosses = nFam) 
+		RGSC[[gen(0)]] <- selectCross(RGSC[[gen(0)]], nInd = nInd(RGSC[[gen(0)]]), use = "rand", simParam = simParam, nCrosses = max(nFam, nInd(RGSC[[gen(0)]]))) 
 		founderBurnIn <- founderBurnIn - 1
 		if(printBurnin) printBurnin <- FALSE
 	}
@@ -110,7 +110,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	if(verbose) cat("Estimated selection intensity:", qnorm(xInt, sd = sqrt(Vg)), "\n")
 
 	# pop <- RGSC[[gen(0)]]; GSfit <- GSmodel[[gen(0)]]
-	# pop <- RGSC[[gen(i)]]; GSfit <- GSmodel[[gen(i)]]
+	# pop <- RGSC[[lastRGSCgen]]; GSfit <- GSmodel[[lastGSmodel]]
 
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
@@ -121,7 +121,6 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		selectRGSCi <- if(deltaRGSC) selectRGSC[i] else selectRGSC[1]
 		# nProgenyPerCrossIni <- if(identical(expDistPairs, selFuncIn)) nNuclear / selectRGSCi  * nProgenyPerCrossIn else nProgenyPerCrossIn
 
-		
 		if (i <= nYr){ 
 			if (verbose) cat("    Year: ", i, "\n")
 
@@ -139,20 +138,22 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 			if(traditional & i > 1) {
 				lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
-				# selPop <- VDP[[lastVDPSel]][[length(VDP[[lastVDPSel]])]] 
 				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "lines selected out of VDP", lastVDPSel, "for making crosses \n")
 			} else {
-				# selPop <- RGSC[[lastRGSCgen]]
 				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
 			}
-						# selToP <- selectInd(selPop, nInd = nFam, trait = 1, use = selectOut)
+			if(is.null(selFuncOut)){
+				selToP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = selectOut)
+			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
 			selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
 												  # pullGeno = pullGenoFunc, w = weight, ...))
 												  pullGeno = pullGenoFunc, w = weight))
+			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
 			
+			# (mean(ebv(selToP)) - mean(ebv(RGSC[[lastRGSCgen]]))) / sd(ebv(RGSC[[lastRGSCgen]]))
 			# Determine number of individuals to select within familiy (default is all)
 			nProgPerFam <- famSize / withinFamInt
 			if ((nProgPerFam) %% 1 != 0) {

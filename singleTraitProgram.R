@@ -21,7 +21,7 @@ defArgs <- list(
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
 	simpleFounder = FALSE,
-	founderBurnIn = 3,
+	founderBurnIn = 1,
 # selection parameters
 	selectRGSC = 0.2,
 	nProgenyPerCrossIn = 1,
@@ -30,9 +30,9 @@ defArgs <- list(
 	selectOut = "ebv", # ebv, var, exp?
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
-	selFuncOut = truncSel, # truncSel, expDist, simDHdist
-	selFuncIn = truncCross, # truncCross, expDistPairs, simDHdistPairs, maxVar
-	withinFamInt = 1, # none, 
+	selFuncOut = NULL, # truncSel, expDist, simDHdist
+	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 	weight = 0.5,
@@ -122,6 +122,7 @@ Reduce(intersect, loci)
 # why does expDistPairs fail even when w = 1??!!!!
 # run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
 # run1$gv
+run1$vy
 # variety <- nFam * famSize * cumprod(selectTrials)
 # nv <- variety[length(variety)]
 # tapply(run1$vy, rep(1:nYr, each = nv), mean)
