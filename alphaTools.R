@@ -238,17 +238,18 @@ expDist <- function(nSel, pop, GSfit, quant, returnQuant = TRUE, pullGeno = pull
 	pop[selection]
 }
 
-# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = 20; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxPropPerParent = 0.05; truncPop = 0.2
-maxVar <- function(pop, GSfit, nCrosses, truncPop = 1, weightLoci = FALSE, use = ebv, pullGeno = pullSnpGeno, maxPropPerParent = 1, verbose = FALSE, nProgeny = 1, ...){
-	nCombos <- choose(nInd(pop) * truncPop, 2)
+# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = 20; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; truncPop = 0.2
+maxVar <- function(pop, GSfit, nSel, nCrosses, truncPop = 1, weightLoci = FALSE, use = ebv, pullGeno = pullSnpGeno, maxCrossPerParent = 1, verbose = FALSE, nProgeny = 1, ...){
+	n <- nInd(pop)
+	if (n < nSel) nSel <-  n
+	nCombos <- choose(nSel, 2)
 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
-	maxP <- if(maxPropPerParent == 0 | nCombos <  nCrosses) nCrosses else if(maxPropPerParent == 1) 1 else maxPropPerParent * nCrosses
+	maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else if(maxCrossPerParent == 1) 1 else maxCrossPerParent * nCrosses
 	
 	parVal <- ebv(pop)
-	# getAcc(pop)
 	rownames(parVal) <- pop@id
 	# if(truncPop < 1) pop <- selectInd(pop, nInd = nInd(pop) * truncPop, use = "ebv")
-	if(truncPop < 1) pop <- truncSel(pop, nSel = nInd(pop) * truncPop, use = use)
+	if(nSel < n) pop <- truncSel(pop, nSel = nInd(pop) * truncPop, use = use)
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	covL <- data.frame(which(lower.tri(K), arr.ind = TRUE), selCrit = K[lower.tri(K)])
@@ -274,17 +275,21 @@ maxVar <- function(pop, GSfit, nCrosses, truncPop = 1, weightLoci = FALSE, use =
 # select pairs
 # nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
 # returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = varA; w = 0.5; nProgeny = 1
-expDistPairs <- function(nSel, pop, GSfit, quant, nCrosses, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA, w = 0.5, nProgeny = 1, ...) {
-	nCombos <- choose(nInd(pop), 2) 
+expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = varA, estVg = FALSE, w = 0.5, nProgeny = 1, ...) {
+	n <- nInd(pop)
+	if (n < nSel) nSel <-  n
 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
 	
 	parVal <- ebv(pop)
 	rownames(parVal) <- pop@id
+	if(nSel < n) pop <- truncSel(pop, nSel = nInd(pop) * truncPop, use = use)
+
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	# txtdensity(K[lower.tri(K)])
 
-	Vg <- Gvar(pop)
+	Vg <- if(estVg) GSfit@Vu else Gvar(pop)
+	# Vg <- Gvar(pop)
 	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
 	colnames(parents) <- c("p1", "p2")
@@ -292,6 +297,17 @@ expDistPairs <- function(nSel, pop, GSfit, quant, nCrosses, returnQuant = TRUE, 
 	Eq <- weightedQuantile(mu = pE$pbar, sigmasq = pE$crossvar, quant = quant, w = w)
 	# Eq <- w * pE$pbar + (1-w) * qnorm(quant, sd = sqrt(pE$crossvar)) # does this make sense?
 	selCrit <- data.frame(parents, selCrit = Eq)
+
+	lenSel <- 0
+	while(lenSel < nCrosses / nEx){
+		if(lenSel > 0) {
+			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
+			maxP <- maxP + 1
+		}
+		selection <- getSel(selCrit, n = nCrosses, high = FALSE, maxP = maxP)
+		lenSel <- nrow(selection)
+	}
+
 	selection <- getSel(selCrit, n = nCrosses)
 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
@@ -323,7 +339,9 @@ randomCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random s
 
 # truncSel <- function(pop, nSel, traits = 1, ...) selectInd(pop, nInd = nSel, trait = traits, ...)
 
+# something needs to be fixed here, ebv vs "ebv"
 selectInd2 <- function(pop, nSel, trait = 1, use = pheno, selFunc = identity){
+	if(is.character(use)) use <- match.fun(use)
 	sel <- use(pop)
 	names(sel) <- pop@id
 	selection <- getSel(selFunc(sel), n = nSel)
