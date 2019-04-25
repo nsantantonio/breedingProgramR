@@ -1,6 +1,10 @@
 # ignore testing directory
-testSim/
 founderPop/
 results/
+oldResults/
 figures/
-tempMakePlotsForLabMeeting.R
+oldFigures/
+logs/
+run*
+test*
+expectedVarianceOfSelfing.R
