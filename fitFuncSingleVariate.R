@@ -147,7 +147,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				selToP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = selectOut)
 			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
-			selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
+				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
 												  # pullGeno = pullGenoFunc, w = weight, ...))
 												  pullGeno = pullGenoFunc, w = weight))
@@ -206,7 +206,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				}
 			# run GS model to cycle through RGSC for year i
 				if(is.null(selFuncIn)){
-					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = selectRGSCi, use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = RGSCprogenyPerCross) # keep nprgeny = 1
+					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
 					# if(identical(expDistPairs, selFuncIn)) nProgenyPerCrossIn <- nNuclear / selectRGSCi  * nProgenyPerCrossIn 
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],

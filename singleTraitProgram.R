@@ -122,7 +122,7 @@ Reduce(intersect, loci)
 # why does expDistPairs fail even when w = 1??!!!!
 # run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
 # run1$gv
-run1$vy
+# run1$vy
 # variety <- nFam * famSize * cumprod(selectTrials)
 # nv <- variety[length(variety)]
 # tapply(run1$vy, rep(1:nYr, each = nv), mean)
