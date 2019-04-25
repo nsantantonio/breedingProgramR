@@ -70,6 +70,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		selectVDP <- "bv"
 		useGS <- "bv"
 		pullGenoFunc <- pullQtlGeno
+		ebv <- bv
 	} else {
 		gen0use <- "pheno"
 		estIntFunc <- pheno
