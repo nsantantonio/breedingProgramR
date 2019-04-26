@@ -14,7 +14,7 @@ for i in truncSel expDist simDHdist; do
             "selFuncOut=(${i})" \
             "selFuncIn=(${j})")
         # echo ${args[1]} ${args[2]}
-        Rscript ${pardir}/singleTraitProgram.R --args "${args[@]}" > ${pardir}/logs/log_${i}_${j}.txt
+        Rscript ${pardir}/singleTraitProgram.R --args "${args[@]}" > ${pardir}/logs/log_${i}_${j}.txt &
     done
 done
 
@@ -26,7 +26,7 @@ for i in truncSel expDist simDHdist; do
             "selFuncIn=(${j})"\
             "selectRGSC=1")
         # echo ${args[1]} ${args[2]}
-        Rscript ${pardir}/singleTraitProgram.R --args "${args[@]}" > ${pardir}/logs/log_${i}_${j}.txt
+        Rscript ${pardir}/singleTraitProgram.R --args "${args[@]}" > ${pardir}/logs/log_${i}_${j}.txt &
     done
 done
 
