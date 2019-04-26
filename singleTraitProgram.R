@@ -70,14 +70,12 @@ attach(defArgs)
 library(AlphaSimR)
 library(doMC)
 library(txtplot) 
-# source(paramFile)
 
-print(getwd())
-
+# source simulation function
 source(simFunc)
 
-
-nFam * famSize * cumprod(selectTrials)
+# print selection sizes
+nFam * famSize * c(1, cumprod(selectTrials))
 
 if(!is.null(projName)) projName <- paste0(projName, "/")
 # make directory to store all results
@@ -117,18 +115,14 @@ SP$setVarE(h2 = founderh2)
 SP$addSnpChip(nM)
 
 loci <- pullLoci(SP)
-Reduce(intersect, loci)
+# Reduce(intersect, loci)
 
-# why does expDistPairs fail even when w = 1??!!!!
-# run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
-# run1$gv
-# run1$vy
-# variety <- nFam * famSize * cumprod(selectTrials)
-# nv <- variety[length(variety)]
-# tapply(run1$vy, rep(1:nYr, each = nv), mean)
-
-# run1$Vg
-
+testRun <- FALSE
+if(testRun){
+	run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
+	run1$gv
+	run1$vy
+}
 
 if(system("hostname", intern = TRUE) == "Bender") {
 	setMKLthreads(1)
@@ -140,4 +134,4 @@ if(system("hostname", intern = TRUE) == "Bender") {
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
 simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
-save(simrun, SP, file = paste0("results/", simName, "/", simName, ".RData"))
+save(simrun, SP, file = paste0(simDir, "/", simName, ".RData"))

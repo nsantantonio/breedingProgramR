@@ -33,7 +33,6 @@ mergePopsRec <- function(popList) mergePops(lapply(popList, function(x) if (is.l
 
 getAF <- function(pop, pullGeno = pullSnpGeno) colMeans(pullGeno(pop)) / 2
 h2toVe <- function(h2, Vg = 1) Vg * (1-h2) / h2
-geth2 <- function(GSfit) GSfit@Vu / sum(GSfit@Vu, GSfit@Ve)
 gen <- function(i) paste0("gen", i)
 logSelInd <- function(pop, sel) pop@id %in% sel  
 rSel <- function(sel) Reduce("&", sel) 
@@ -82,13 +81,12 @@ rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...
 	}
 }
 
-estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = pheno, Gvar = varA) {
+estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = pheno, Gvar = estVg) {
 	S <- mean(pheno(VDP[[end]][[gen(i - nT)]])) - mean(pheno(VDP[[start]][[gen(i - nT)]]))
 	i <- S / sqrt(Gvar(VDP[[start]][[gen(i - nT)]]))
 	if(is.matrix(i) & prod(dim(i)) == 1) i <- i[[1]] else cat("intensity has dimensions:", dim(i), "\n")
 	i
 }
-
 
 
 # getSel <- function(selCrit, n, high = TRUE, variable = "selCrit") {
@@ -168,12 +166,23 @@ getSelfVar <- function(M, u, fdiff = NULL) {
 	Hu
 }
 
-
 weightedQuantile <- function(mu, sigmasq, quant = 0.9, w = 0.5) {
-	cat("weight parameter 'w' has value:", w, "\n")
+	cat("            weight parameter 'w' has value:", w, "\n")
 	w * mu + (1-w) * qnorm(quant, sd = sqrt(sigmasq))
 }
 
+estVg <- function(pop, GSfit = NULL, GSfunc = RRBLUP) {
+	if(is.null(GSfit)) GSfit <- GSfunc(pop)
+	af <- getAF(pop)
+	Vg <- GSfit@Vu
+	Vg <- if(is.matrix(Vg) & prod(dim(Vg)) == 1) Vg[[1]]
+	Vg * sum(2 * af * (1-af))
+}
+
+geth2 <- function(pop, GSfit) {
+	Vg <- estVg(pop, GSfit)
+	Vg / sum(Vg, GSfit@Ve)
+}
 # function to return expected quantiles from sampling DH individuals
 # select individuals
 simDHdist <- function(nSel, pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200, w = 0.5, nProgeny = 1, returnPop = TRUE, bigmem = FALSE, ...) {
@@ -225,7 +234,7 @@ simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, retQuant = FALSE, quant =
 }
 
 # select individuals
-expDist <- function(nSel, pop, GSfit, use, quant, returnQuant = TRUE, pullGeno = pullSnpGeno, Gvar = varA, updateEBV = FALSE, w = 0.5, nProgeny = 1, ...){
+expDist <- function(nSel, pop, GSfit, use, quant, returnQuant = TRUE, pullGeno = pullSnpGeno, updateEBV = FALSE, w = 0.5, nProgeny = 1, ...){
 	expVar <- do.call(getSelfVar, getArgs(getSelfVar, M = pullGeno(pop), u = GSfit@markerEff, ...))
 	if(returnQuant) {
 		if(updateEBV) pop <- setEBV(pop, GSfit)
@@ -247,10 +256,8 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
 	maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
 	
-	parVal <- ebv(pop)
-	rownames(parVal) <- pop@id
-	# if(truncPop < 1) pop <- selectInd(pop, nInd = nInd(pop) * truncPop, use = "ebv")
 	if(nSel < n) pop <- truncSel(pop, nSel = nSel, use = use)
+
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	covL <- data.frame(which(lower.tri(K), arr.ind = TRUE), selCrit = K[lower.tri(K)])
@@ -272,28 +279,26 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 	makeCross(pop, crossPlan = selection) 
 }
 
-estVg <- function(pop, GSfit) {
-	af <- getAF(pop)
-	GSfit$Vu * sum(2 * af * (1-af))
-}
+
 # select pairs
 # nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
 # returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = varA; w = 0.5; nProgeny = 1
-expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, Gvar = estVg, estVg = FALSE, w = 0.5, nProgeny = 1, ...) {
+expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, maxCrossPerParent = 0, Gvar = estVg, w = 0.5, nProgeny = 1, ...) {
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n
+	nCombos <- choose(nSel, 2)
 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
+	maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
 	
+	if(nSel < n) pop <- truncSel(pop, nSel = nSel, use = use)
 	parVal <- ebv(pop)
 	rownames(parVal) <- pop@id
-	if(nSel < n) pop <- truncSel(pop, nSel = nInd(pop) * truncPop, use = use)
 
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	# txtdensity(K[lower.tri(K)])
 
-	Vg <- if(estVg) GSfit@Vu else Gvar(pop)
-	# Vg <- Gvar(pop)
+	Vg <- Gvar(pop = pop, GSfit = GSfit)
 	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
 	colnames(parents) <- c("p1", "p2")
@@ -366,6 +371,8 @@ checkFit <- function(pop){
 	GSfit <- GSfunc(pop, traits = 1, use = "pheno", snpChip = 1, simParam = simParam)
 	pop <- setEBV(pop, GSfit, simParam = simParam)
 	M <- pullSnpGeno(pop)
+
+	cat("alphaSimR RRBLUP iterations:", GSfit@iter, "\n")
 	
 	cat("alphaSimR RR-BLUP Vu:",  GSfit@Vu, ", Ve:", GSfit@Ve, "\n")
 
