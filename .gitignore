@@ -5,6 +5,6 @@ oldResults/
 figures/
 oldFigures/
 logs/
-run*
+# run*
 test*
 expectedVarianceOfSelfing.R
