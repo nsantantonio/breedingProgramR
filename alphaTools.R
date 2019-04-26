@@ -29,21 +29,21 @@ getArgs <- function(f, ...) list(...)[names(list(...)) %in% names(formals(f))]
 # }
 # cR(popList)
 
-mergePopsRec <- function(popList) mergePops(lapply(popList, function(x) if (is.list(x)) mergePopsRec(x) else x))
+mergePopsRec <- function(popList) { mergePops(lapply(popList, function(x) if (is.list(x)) mergePopsRec(x) else x)) }
 
-getAF <- function(pop, pullGeno = pullSnpGeno) colMeans(pullGeno(pop)) / 2
-h2toVe <- function(h2, Vg = 1) Vg * (1-h2) / h2
-gen <- function(i) paste0("gen", i)
-logSelInd <- function(pop, sel) pop@id %in% sel  
-rSel <- function(sel) Reduce("&", sel) 
-maxBv <- function(simParam, traits = 1) sapply(simParam$traits[traits], function(x) sum(abs(x@addEff)))
-sdUnCor <- function(x) sqrt(mean(x^2) - mean(x)^2)
-getRRh2 <- function(rrFit) solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu
-getAcc <- function(pop) cor(gv(pop), ebv(pop))
-dummyFunc <- function(x, retrn) retrn
+getAF <- function(pop, pullGeno = pullSnpGeno) { colMeans(pullGeno(pop)) / 2 }
+h2toVe <- function(h2, Vg = 1) { Vg * (1-h2) / h2 }
+gen <- function(i) { paste0("gen", i) }
+logSelInd <- function(pop, sel) { pop@id %in% sel   }
+rSel <- function(sel) { Reduce("&", sel)  }
+maxBv <- function(simParam, traits = 1) { sapply(simParam$traits[traits], function(x) sum(abs(x@addEff))) }
+sdUnCor <- function(x) { sqrt(mean(x^2) - mean(x)^2) }
+getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
+getAcc <- function(pop) { cor(gv(pop), ebv(pop)) }
+dummyFunc <- function(x, retrn) { retrn }
 
 # get locus index
-pullLoci <- function(simParam, snpChip = 1, asList = FALSE) 	{
+pullLoci <- function(simParam, snpChip = 1, asList = FALSE) {
 	splitIndex <- function(lpc, loc) split(loc, rep(1:length(lpc), times = lpc))
 	getIndex <- function(sites, nPerChr, loc){
 		indexList <- splitIndex(sites, 1:sum(sites))
@@ -111,7 +111,7 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 
 # tmpDf <- dF
 # dF <- tmpDf
-dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), returnPar = TRUE){
+dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), returnPar = TRUE) {
 	dFord <- order(dF[[val]])
 	if(!(all(dFord == 1:nrow(dF)) | all(dFord == nrow(dF):1))) stop("dF must be sorted in order to select!")
 	
@@ -150,7 +150,7 @@ getSel <- function(selCrit, n, high = TRUE, variable = "selCrit", parentCols = c
 	sel
 }
 
-getTrueQTLeff <- function(simParam, trait = 1) simParam$traits[[trait]]@addEff 
+getTrueQTLeff <- function(simParam, trait = 1) { simParam$traits[[trait]]@addEff }
 
 getTrueBV <- function(pop, simParam, trait = 1) {
 	M <- pullQtlGeno(pop)	
