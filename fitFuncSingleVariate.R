@@ -208,6 +208,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
+					# print(selectRGSCi)
 					# if(identical(expDistPairs, selFuncIn)) nProgenyPerCrossIn <- nNuclear / selectRGSCi  * nProgenyPerCrossIn 
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
 					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 

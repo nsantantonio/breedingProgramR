@@ -31,16 +31,16 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	selFuncIn = simDHdistPairs, # truncCross, expDistPairs, simDHdistPairs, maxVar
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 	weight = 0.5,
 # family parameters
 	nFounder = 10,
-	nNuclear = 100,
+	nNuclear = 10,
 	nFam = 10,
-	famSize = 50,
+	famSize = 20,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 1,
@@ -60,6 +60,7 @@ defArgs <- list(
 	nLoci = 100,
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
+# other args - need to be able to add additional things here that 
 )
 
 

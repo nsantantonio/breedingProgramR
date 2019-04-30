@@ -108,9 +108,6 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 
 # dF[dFSel(dF, maxP = 2), ]
 
-
-# tmpDf <- dF
-# dF <- tmpDf
 dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), returnPar = TRUE) {
 	dFord <- order(dF[[val]])
 	if(!(all(dFord == 1:nrow(dF)) | all(dFord == nrow(dF):1))) stop("dF must be sorted in order to select!")
@@ -123,12 +120,13 @@ dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), re
 
 	for (i in 1:nrow(parMat)) {
 		parenti <- parMat[i, ]
-		parCount[parenti] <- parCount[parenti] + 1
-		if(all(parCount[parenti] <= limit)) rows <- c(rows, i)
+		if(all(parCount[parenti] < limit)) {
+			parCount[parenti] <- parCount[parenti] + 1
+			rows <- c(rows, i)
+		}
 	}
-	if(returnPar) parMat[rows, ] else rows
+	if(returnPar) parMat[rows, , drop = FALSE] else rows
 }
-
 # dFSel(dF, maxP = 2)
 
 
@@ -140,7 +138,7 @@ getSel <- function(selCrit, n, high = TRUE, variable = "selCrit", parentCols = c
 		selCrit <- selCrit[order(selCrit[[variable]], decreasing = high), ]
 		if(!is.null(maxP)){
 			sel <- dFSel(selCrit, limit = maxP, val = variable, parentCols = parentCols)
-			sel <- sel[1:min(nrow(sel), n), ] 
+			sel <- sel[1:min(nrow(sel), n), , drop = FALSE] 
 		} else {
 			sel <- as.matrix(selCrit[1:n, parentCols])
 		}
@@ -210,24 +208,61 @@ simDHdist <- function(nSel, pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200
 	}
 }
 
+# # select pairs and cross
+# simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, retQuant = FALSE, quant = 0.9, nDH = 200, maxCrossPerParent = 1, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
+# 	nCombos <- choose(nInd(pop), 2) 
+# 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
+# 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
+# 	colnames(parents) <- c("p1", "p2")
+# 	crosses <- rep(1:nrow(parents), each = nSimCrosses)
+# 	popX <- makeCross(pop, parents[crosses,])
+# 	# popX <- setEBV(popX, GSfit)
+# 	if(verbose) cat("simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
+# 	simQuant <- simDHdist(nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, returnPop = FALSE)
+# 	# if(nSimCrosses > 1) simSd <- tapply(simQuant, crosses, sd)
+# 	if(nSimCrosses > 1) simQuant <- tapply(simQuant, crosses, mean)
+
+# 	selCrit <- data.frame(parents, selCrit = simQuant)
+# 	selection <- getSel(selCrit, n = nCrosses)
+# 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+
+# 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+# 	# makeCross(pop, crossPlan = selection) 
+# 	makeCross(pop, crossPlan = selection) 
+# }
+
+#this seems to ignore maxCrossPerParent when pop is small? need to investigate 4/29
 # select pairs and cross
-simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, retQuant = FALSE, quant = 0.9, nDH = 200, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
-	nCombos <- choose(nInd(pop), 2) 
+simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, retQuant = FALSE, quant = 0.9, nDH = 200, w = 0.5, maxCrossPerParent = 1, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
+	n <- nInd(pop)
+	if (n < nSel) nSel <-  n
+	nCombos <- choose(nSel, 2) 
 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
+	maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
+	
 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
 	colnames(parents) <- c("p1", "p2")
 	crosses <- rep(1:nrow(parents), each = nSimCrosses)
 	popX <- makeCross(pop, parents[crosses,])
 	# popX <- setEBV(popX, GSfit)
 	if(verbose) cat("simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
-	simQuant <- simDHdist(nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, returnPop = FALSE)
+	simQuant <- simDHdist(nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, w = w, returnPop = FALSE)
 	# if(nSimCrosses > 1) simSd <- tapply(simQuant, crosses, sd)
 	if(nSimCrosses > 1) simQuant <- tapply(simQuant, crosses, mean)
 
 	selCrit <- data.frame(parents, selCrit = simQuant)
-	selection <- getSel(selCrit, n = nCrosses)
-	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+	lenSel <- 0
+	while(lenSel < nCrosses / nEx){
+		if(lenSel > 0) {
+			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
+			maxP <- maxP + 1
+		}
+		selection <- getSel(selCrit, n = nCrosses, high = TRUE, maxP = maxP)
+		lenSel <- nrow(selection)
+	}
+	if(verbose) print(table(selection))
 
+	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
 	# makeCross(pop, crossPlan = selection) 
 	makeCross(pop, crossPlan = selection) 
@@ -241,14 +276,14 @@ expDist <- function(nSel, pop, GSfit, use, quant, returnQuant = TRUE, pullGeno =
 		parVal <- ebv(pop)
 		expVar <- weightedQuantile(mu = parVal, sigmasq = expVar, quant = quant, w = w)
 		# expVar <- w * parVal + (1-w) * qnorm(quant, sd = sqrt(expVar))
-	} # need top check why this seems to work so poorly...
+	} # need to check why this seems to work so poorly...
 	if(ncol(expVar) == 1) expVar <- expVar[, 1]
-	selection <- getSel(expVar, n = nSel)
+	selection <- getSel(expVar, n = nSel, high = TRUE)
 	if(nProgeny > 1) selection <- rep(selection, each = nProgeny)
 	pop[selection]
 }
 
-# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = 20; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; 
+# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; 
 maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno = pullSnpGeno, maxCrossPerParent = 1, verbose = FALSE, nProgeny = 1, ...){
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n
@@ -281,8 +316,8 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 
 
 # select pairs
-# nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
-# returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = varA; w = 0.5; nProgeny = 1
+# use = ebv; nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
+# returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = estVg; w = 0.5; nProgeny = 1
 expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = TRUE, weightLoci = FALSE, pullGeno = pullSnpGeno, maxCrossPerParent = 0, Gvar = estVg, w = 0.5, nProgeny = 1, ...) {
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n
@@ -298,7 +333,7 @@ expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = T
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	# txtdensity(K[lower.tri(K)])
 
-	Vg <- Gvar(pop = pop, GSfit = GSfit)
+	Vg <- do.call(Gvar, getArgs(Gvar, pop = pop, GSfit = GSfit, ...))
 	if (prod(dim(Vg)) > 1) stop("can only handle a single trait!") else Vg <- Vg[[1]]
 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
 	colnames(parents) <- c("p1", "p2")
@@ -313,7 +348,8 @@ expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = T
 			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
 			maxP <- maxP + 1
 		}
-		selection <- getSel(selCrit, n = nCrosses, high = FALSE, maxP = maxP)
+		# selection <- getSel(selCrit, n = nCrosses, high = FALSE, maxP = maxP) # WAIT!!!!!! should this be low???????????
+		selection <- getSel(selCrit, n = nCrosses, high = TRUE, maxP = maxP) # rerun with high = TRUE??
 		lenSel <- nrow(selection)
 	}
 
