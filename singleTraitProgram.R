@@ -7,7 +7,7 @@ source(paste0(parDir, "/alphaTools.R"))
 defArgs <- list(
 # simulation parameters
 	seed = 12345,
-	nThreads = 20, 
+	nThreads = 11, 
 	projName = NULL, 
 	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
@@ -31,16 +31,16 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = expDistPairs, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 	weight = 0.5,
 # family parameters
 	nFounder = 10,
-	nNuclear = 20,
+	nNuclear = 100,
 	nFam = 10,
-	famSize = 20,
+	famSize = 50,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 1,
