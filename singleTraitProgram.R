@@ -60,7 +60,6 @@ defArgs <- list(
 	nLoci = 100,
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
-# other args - need to be able to add additional things here that 
 )
 
 stdArgNames <- names(defArgs)

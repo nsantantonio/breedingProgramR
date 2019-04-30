@@ -237,7 +237,7 @@ simDHdist <- function(nSel, pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200
 # select pairs and cross
 # pop <- RGSC[[lastRGSCgen]]; GSfit <- GSmodel[[lastGSmodel]]; use = ebv; nSel = selectRGSCi; nCrosses = nNuclear; maxCrossPerParent = 1; nDH = 200; quant = xInt; retQuant = FALSE;  w = 0.5
 # nSel = selectRGSCi; pop = selPop; GSfit = GSmodel[[lastGSmodel]];trait = 1;  use = selectIn;  trait = 1; nCrosses = nNuclear; nProgeny = nProgenyPerCrossIn; quant = xInt; verbose = verbose; pullGeno = pullGenoFunc; w = weight
-simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, quant = 0.9, nDH = 200, weight = 0.5, maxCrossPerParent = 0, nSimCrosses = 10, nProgeny = 1, verbose = FALSE, ...) {
+simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, quant = 0.9, nDH = 200, weight = 0.5, maxCrossPerParent = 0, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
 	# browser()
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n

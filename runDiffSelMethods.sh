@@ -9,7 +9,7 @@ Rscript ${pardir}/singleTraitProgram.R --args "${args[@]}" > ${pardir}/logs/defa
 # Note: functions, NULL or anything else that needs to be evaluated must be put in parentheses so they are evaluated properly, otherwise they will be treated as strings
 for i in truncSel expDist simDHdist; do
 	for j in truncCross expDistPairs simDHdistPairs maxVar; do 
-        args=("seed=12345" \
+        args=("nThreads = 4" \
             "simName=${i}_${j}" \
             "selFuncOut=(${i})" \
             "selFuncIn=(${j})")
