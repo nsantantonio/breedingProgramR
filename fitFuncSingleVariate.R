@@ -48,6 +48,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		actInt <- selectTrials / c(nI, selectTrials[-length(selectTrials)])
 		cat("NOTE: Selection intensities have been rounded to the nearest integer:\n", selectTrials, "\nThese correspond to selection intensities of:\n", actInt, "\n")
 	}
+	if(length(returnVDPtoRGSC) != length(selectTrials) + 1) stop("returnVDPtoRGSC must be of length(selectTrials) + 1 (for variety)!")
 	if (all(returnVDPtoRGSC <= 1)) returnVDPtoRGSC <- returnVDPtoRGSC * c(nI, selectTrials) 
 
 	# count and rename trials
@@ -181,7 +182,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		}
 
 		# get generation indices
-		genI <- tail(1:i, min(5, i))
+		genI <- tail(1:i, min(nTrial, i))
 		genI <- genI[genI <= nYr]
 		genBack <- abs(genI - i) + 1
 		index = 1:length(genI)
