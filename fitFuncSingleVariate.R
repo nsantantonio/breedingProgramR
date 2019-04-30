@@ -149,8 +149,8 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# select out of RGSC, on mean, expected quantile, etc...
 				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
 												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
-												  # pullGeno = pullGenoFunc, w = weight, ...))
-												  pullGeno = pullGenoFunc, w = weight))
+												  pullGeno = pullGenoFunc, w = weight, ...))
+												  # pullGeno = pullGenoFunc, w = weight))
 			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
 			
@@ -208,12 +208,12 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
-					# print(selectRGSCi)
-					# if(identical(expDistPairs, selFuncIn)) nProgenyPerCrossIn <- nNuclear / selectRGSCi  * nProgenyPerCrossIn 
-					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
+					# RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
+					# trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
 					# pullGeno = pullGenoFunc, w = weight, ...))
-					pullGeno = pullGenoFunc, w = weight))
+					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
+					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, ...))
+					# pullGeno = pullGenoFunc, w = weight))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1

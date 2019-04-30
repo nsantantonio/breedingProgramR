@@ -16,7 +16,7 @@ defArgs <- list(
 	lgen = 5,
 	useTrue = FALSE,
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
-	nSimCrosses = 10, 
+	# nSimCrosses = 10, 
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
@@ -31,11 +31,11 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	selFuncIn = simDHdistPairs, # truncCross, expDistPairs, simDHdistPairs, maxVar
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
-	weight = 0.5,
+	# weight = 0.5,
 # family parameters
 	nFounder = 10,
 	nNuclear = 100,
@@ -121,7 +121,10 @@ loci <- pullLoci(SP)
 
 testRun <- FALSE
 if(testRun){
-	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0), defArgs[altArgs]))
+	defArgs[["maxCrossPerParent"]] <- 1
+	defArgs[["weight"]] <- 0.2
+	altArgs <- c(altArgs, "maxCrossPerParent", "weight")
+	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 	run1$gv
 	run1$vy
 }
@@ -132,8 +135,6 @@ if(system("hostname", intern = TRUE) == "Bender") {
 } else {
 	registerDoMC(nThreads)
 }
-
-# simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
 # simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 simrun <- foreach(r = 1:reps) %dopar% do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
