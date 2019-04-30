@@ -88,7 +88,6 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 	i
 }
 
-
 # getSel <- function(selCrit, n, high = TRUE, variable = "selCrit") {
 # 	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
 # 	if(len < n) n <- nrow(selCrit)
@@ -109,8 +108,12 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 # dF[dFSel(dF, maxP = 2), ]
 
 dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), returnPar = TRUE) {
-	dFord <- order(dF[[val]])
-	if(!(all(dFord == 1:nrow(dF)) | all(dFord == nrow(dF):1))) stop("dF must be sorted in order to select!")
+	dFord <- list(fwd = order(dF[[val]]), rev = order(-dF[[val]]))
+	dup <- duplicated(dF[[val]])
+	dFord <- lapply(dFord, function(x) x[!dup])
+	if(!(list({1:nrow(dF)}[!dup]) %in% dFord | list({nrow(dF):1}[!rev(dup)]) %in% dFord)) {
+		stop("dF must be sorted in order to select!")
+	}
 	
 	parMat <- as.matrix(dF[, parentCols])
 	parents <- sort(unique(c(parMat)))
@@ -131,7 +134,6 @@ dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), re
 
 
 getSel <- function(selCrit, n, high = TRUE, variable = "selCrit", parentCols = c("p1", "p2"), maxP = NULL) {
-	# add inbreeding limits here!
 	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
 	if(len < n) n <- nrow(selCrit)
 	if (is.data.frame(selCrit)){
@@ -356,7 +358,7 @@ expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = T
 	selection <- getSel(selCrit, n = nCrosses)
 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	makeCross(pop, crossPlan = selection) 
+	makeCross(pop, crossPlan = selection)
 }
 
 # select and cross
