@@ -7,7 +7,7 @@ source(paste0(parDir, "/alphaTools.R"))
 defArgs <- list(
 # simulation parameters
 	seed = 12345,
-	nThreads = 11, 
+	nThreads = 20, 
 	projName = NULL, 
 	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
@@ -31,16 +31,16 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	selFuncIn = expDistPairs, # truncCross, expDistPairs, simDHdistPairs, maxVar
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 	weight = 0.5,
 # family parameters
 	nFounder = 10,
-	nNuclear = 100,
+	nNuclear = 20,
 	nFam = 10,
-	famSize = 50,
+	famSize = 20,
 	ssd = FALSE,
 	selF2 = FALSE,
 	nF2 = 1,
@@ -63,8 +63,9 @@ defArgs <- list(
 # other args - need to be able to add additional things here that 
 )
 
-
+stdArgNames <- names(defArgs)
 defArgs <- getComArgs(defArgs)
+altArgs <- names(defArgs)[!names(defArgs) %in% stdArgNames] 
 attach(defArgs)
 
 # load libraries
@@ -120,7 +121,7 @@ loci <- pullLoci(SP)
 
 testRun <- FALSE
 if(testRun){
-	run1 <- sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0)
+	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats, w = 0), defArgs[altArgs]))
 	run1$gv
 	run1$vy
 }
@@ -134,5 +135,6 @@ if(system("hostname", intern = TRUE) == "Bender") {
 
 # simrun <- foreach(r = 1:reps) %do% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 
-simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
+# simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
+simrun <- foreach(r = 1:reps) %dopar% do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 save(simrun, SP, file = paste0(simDir, "/", simName, ".RData"))
