@@ -8,3 +8,4 @@ logs/
 # run*
 test*
 expectedVarianceOfSelfing.R
+runCBSU.sh
