@@ -148,8 +148,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
 				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, 
-												  pullGeno = pullGenoFunc, w = weight, ...))
+												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, ...))
 												  # pullGeno = pullGenoFunc, w = weight))
 			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
