@@ -591,8 +591,8 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", al
 
 
 getIntensity <- function(x) {
-    S <- x$vy - x$gv[x$RGSCyr]
-	i <- S / x$Vg[x$RGSCyr]
+    S <- x$vy - x$gv[x$RGSCyr - 1]
+	i <- S / x$Vg[x$RGSCyr - 1]
 	list(S = S, i = i)
 }
 
@@ -691,8 +691,6 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
 	    legend("topleft", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 	}
 }
-
-
 
 
 
