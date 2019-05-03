@@ -14,13 +14,13 @@
 
 
 # paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP
-sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = RRBLUP, ...){
+sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
 	# parameter checks and warnings.
 	if (checkParam){
-		paramNames <- c("founderRData", "simFunc", "nThreads", "simName", "RGSCselect", "selF2", "nF2", 
-						"selQuantile", "ssd", "simpleFounder", "nFounder", "nNuclear", "nChrom", "nLoci", 
-						"nM", "nQTL", "Vg", "Vgxe", "founderh2", "h2", "nYr", "nFam", "famSize", "selectTrials", 
-						"trialReps", "trialLocs", "cyclePerYr", "returnVDPtoRGSC", "lgen", "RGSCintensity", "reps")
+		paramNames <- c("maxIter", "lgen", "useTrue", "traditional", "founderBurnIn", "selectRGSC", "nProgenyPerCrossIn", "nProgenyPerCrossOut", 
+						"selectIn", "selectOut", "selectVDP", "returnVDPcrit", "selFuncOut", "selFuncIn", "withinFamInt", "setXint", "skip", 
+						"nFounder", "nNuclear", "nFam", "famSize", "ssd", "selF2", "nF2", "Vg", "updateVg", "h2", "nYr", "selectTrials", "trialReps", 
+						"trialLocs", "cyclePerYr", "returnVDPtoRGSC", "nChrom", "nLoci", "nM", "nQTL")
 		if (!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
 	}
 	for (p in names(paramL)) assign(p, paramL[[p]])
@@ -72,11 +72,13 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		useGS <- "bv"
 		pullGenoFunc <- pullQtlGeno
 		ebv <- bv
+		Gvar <- varA
 	} else {
 		gen0use <- "pheno"
 		estIntFunc <- pheno
 		useGS <- "pheno"
 		pullGenoFunc <- pullSnpGeno
+		Gvar <- estVg
 	}
 
 	# define cycles
@@ -104,7 +106,8 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		if(printBurnin) printBurnin <- FALSE
 	}
 	# train GS model and set EBV (after selfing if ssd)
-	GSmodel[[gen(0)]] <- GSfunc(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue)
+	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue)
+	# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue, maxIter = 1000L, ...))
 	if (selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	
@@ -131,7 +134,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			
 			# estimate VDP selection intensity from previous generations
 			if (i > nTrial) {
-				intensity[[gen(i)]] <- estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = varA)
+				intensity[[gen(i)]] <- estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = Gvar)
 				if(is.null(setXint)) xInt <- pnorm(intensity[[gen(i)]]) 
 				if(verbose) cat("Realized selection intensity:", intensity[[gen(i)]], "\n")
 			}
@@ -149,7 +152,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
 				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, ...))
+												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, ...))
 												  # pullGeno = pullGenoFunc, w = weight))
 			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
@@ -208,12 +211,8 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
-					# RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					# trait = 1,  use = selectIn,  trait = 1, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, 
-					# pullGeno = pullGenoFunc, w = weight, ...))
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, ...))
-					# pullGeno = pullGenoFunc, w = weight))
+					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, ...))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
@@ -229,7 +228,17 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# concatenate training set and train GS model
 	 		train <- mergePopsRec(trnSet) 
 			cat("training set has ", train@nInd, "individuals...\n")	
-			GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
+			# GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
+			
+			if(!is.null(GSfunc)){
+				GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+			} else {
+				if(nInd(train) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
+					GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+				} else {
+					GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+				}
+			}
 		} 
 		# check if final year
 		if (i - nYr == 1) cat("\nFinal year reached, selecting on phenotypes / ebv trained with last year training set ...\n")

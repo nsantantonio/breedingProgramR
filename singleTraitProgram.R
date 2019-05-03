@@ -11,12 +11,11 @@ defArgs <- list(
 	projName = NULL, 
 	simName = "simNoTitle",
 	simFunc = "fitFuncSingleVariate.R", 
-	nYr = 20,
+	maxIter = 1000L,
 	reps = 10,
 	lgen = 5,
 	useTrue = FALSE,
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
-	# nSimCrosses = 10, 
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderh2 = 0.3,
@@ -35,7 +34,6 @@ defArgs <- list(
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
-	# weight = 0.5,
 # family parameters
 	nFounder = 10,
 	nNuclear = 100,
@@ -45,11 +43,11 @@ defArgs <- list(
 	selF2 = FALSE,
 	nF2 = 1,
 # genetic parameters
-	# kinship = "SNP",
 	Vg = 1,
 	updateVg = FALSE,
-	# Vgxe = 1,
 	h2 = c(0.1, 0.3, 0.3, 0.3, 0.3),
+# program parameters
+	nYr = 20,
 	selectTrials = c(0.5, 0.5, 0.4, 0.3, 1/3),
 	trialReps = c(1, 1, 2, 3, 3),
 	trialLocs = c(1, 1, 2, 5, 5),
@@ -120,12 +118,21 @@ loci <- pullLoci(SP)
 
 testRun <- FALSE
 if(testRun){
-	defArgs[["maxCrossPerParent"]] <- 1
-	defArgs[["weight"]] <- 0.2
-	altArgs <- c(altArgs, "maxCrossPerParent", "weight")
+	# defArgs[["maxCrossPerParent"]] <- 1
+	# defArgs[["weight"]] <- 0.2
+	# altArgs <- c(altArgs, "maxCrossPerParent", "weight")
+	# defArgs[["GSfunc"]] <- RRBLUP2
+	# defArgs[["maxIter"]] <- 500L
+	# altArgs <- c(altArgs, "maxCrossPerParent", "weight", "GSfunc", "maxIter")
+
 	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 	run1$gv
 	run1$vy
+
+	reps <- 2
+	setMKLthreads(10)
+	registerDoMC(2)
+	simrun <- foreach(r = 1:reps) %dopar% do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 }
 
 if(system("hostname", intern = TRUE) == "Bender") {
@@ -134,6 +141,8 @@ if(system("hostname", intern = TRUE) == "Bender") {
 } else {
 	registerDoMC(nThreads)
 }
+
+
 
 # simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
 simrun <- foreach(r = 1:reps) %dopar% do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))

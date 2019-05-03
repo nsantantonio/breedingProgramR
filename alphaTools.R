@@ -88,24 +88,14 @@ estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety",
 	i
 }
 
-# getSel <- function(selCrit, n, high = TRUE, variable = "selCrit") {
-# 	len <- if(is.data.frame(selCrit)) nrow(selCrit) else length(selCrit)
-# 	if(len < n) n <- nrow(selCrit)
-# 	if (is.data.frame(selCrit)){
-# 		selCrit <- selCrit[order(selCrit[[variable]], decreasing = high), ]
-# 		sel <- as.matrix(selCrit[1:n, c("p1", "p2")])
-# 	} else {
-# 		sel <- names(sort(selCrit, decreasing = high))[1:n]
-# 	}
-# 	sel
+# selectGSfunc <- function(pop, simParam, snpChip = 1, xtimes = 2, ...) {
+# 	n <- nInd(pop)
+# 	m <- simParam$snpChips[[1]]@nLoci
+# 	gsF <- if(n > m * xtimes) RRBLUP2 else RRBLUP
+# 	print(list(...))
+# 	do.call(gsF, getArgs(gsF, pop = pop, simParam = simParam, ...))
 # }
 
-# expand.grid(p1 = c("1", "2", "3", "4"), p2 = c("1", "2", "3", "4"))[sample(1:16), ]
-# p <- t(combn(as.character(1:6), 2))
-# colnames(p) <- c("p1", "p2")
-# dF <- data.frame(p[sample(1:15), ], selCrit = 1:15)
-
-# dF[dFSel(dF, maxP = 2), ]
 
 dFSel <- function(dF, limit = 1, val = "selCrit", parentCols = c("p1", "p2"), returnPar = TRUE) {
 	dFord <- list(fwd = order(dF[[val]]), rev = order(-dF[[val]]))
@@ -210,35 +200,9 @@ simDHdist <- function(nSel, pop, GSfit, retQuant = FALSE, quant = 0.9, nDH = 200
 	}
 }
 
-# # select pairs and cross
-# simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, retQuant = FALSE, quant = 0.9, nDH = 200, maxCrossPerParent = 1, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
-# 	nCombos <- choose(nInd(pop), 2) 
-# 	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
-# 	parents <- do.call(rbind, combn(pop@id, 2, simplify = FALSE))
-# 	colnames(parents) <- c("p1", "p2")
-# 	crosses <- rep(1:nrow(parents), each = nSimCrosses)
-# 	popX <- makeCross(pop, parents[crosses,])
-# 	# popX <- setEBV(popX, GSfit)
-# 	if(verbose) cat("simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
-# 	simQuant <- simDHdist(nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, returnPop = FALSE)
-# 	# if(nSimCrosses > 1) simSd <- tapply(simQuant, crosses, sd)
-# 	if(nSimCrosses > 1) simQuant <- tapply(simQuant, crosses, mean)
-
-# 	selCrit <- data.frame(parents, selCrit = simQuant)
-# 	selection <- getSel(selCrit, n = nCrosses)
-# 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
-
-# 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-# 	# makeCross(pop, crossPlan = selection) 
-# 	makeCross(pop, crossPlan = selection) 
-# }
-
-#this seems to ignore maxCrossPerParent when pop is small? need to investigate 4/29
 # select pairs and cross
-# pop <- RGSC[[lastRGSCgen]]; GSfit <- GSmodel[[lastGSmodel]]; use = ebv; nSel = selectRGSCi; nCrosses = nNuclear; maxCrossPerParent = 1; nDH = 200; quant = xInt; retQuant = FALSE;  w = 0.5
-# nSel = selectRGSCi; pop = selPop; GSfit = GSmodel[[lastGSmodel]];trait = 1;  use = selectIn;  trait = 1; nCrosses = nNuclear; nProgeny = nProgenyPerCrossIn; quant = xInt; verbose = verbose; pullGeno = pullGenoFunc; w = weight
+# pop <- RGSC[[lastRGSCgen]]; GSfit <- GSmodel[[lastGSmodel]]; use = ebv; nSel = selectRGSCi; nCrosses = nNuclear; maxCrossPerParent = 1; nDH = 200; quant = xInt; retQuant = FALSE;  w = 0.5; weight = 0.5; nSimCrosses = 1
 simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, quant = 0.9, nDH = 200, weight = 0.5, maxCrossPerParent = 0, nSimCrosses = 1, nProgeny = 1, verbose = FALSE, ...) {
-	# browser()
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n
 	nCombos <- choose(nSel, 2) 
@@ -251,11 +215,9 @@ simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, qu
 	colnames(parents) <- c("p1", "p2")
 	crosses <- rep(1:nrow(parents), each = nSimCrosses)
 	popX <- makeCross(pop, parents[crosses, , drop = FALSE])
-	# popX <- setEBV(popX, GSfit)
+
 	if(verbose) cat("simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
-	# simQuant <- simDHdist(nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, w = w, returnPop = FALSE)
 	simVar <- do.call(simDHdist, getArgs(simDHdist, nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, weight = weight, returnPop = FALSE, ...))
-	# if(nSimCrosses > 1) simSd <- tapply(simQuant, crosses, sd)
 	if(nSimCrosses > 1) simVar <- tapply(simVar, crosses, mean)
 
 	selCrit <- data.frame(parents, selCrit = simVar)
@@ -272,7 +234,6 @@ simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, qu
 
 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	# makeCross(pop, crossPlan = selection) 
 	makeCross(pop, crossPlan = selection) 
 }
 
@@ -283,8 +244,7 @@ expDist <- function(nSel, pop, GSfit, use, quant, returnQuant = TRUE, pullGeno =
 		if(updateEBV) pop <- setEBV(pop, GSfit)
 		parVal <- ebv(pop)
 		expVar <- weightedQuantile(mu = parVal, sigmasq = expVar, quant = quant, w = weight)
-		# expVar <- w * parVal + (1-w) * qnorm(quant, sd = sqrt(expVar))
-	} # need to check why this seems to work so poorly...
+	} 
 	if(ncol(expVar) == 1) expVar <- expVar[, 1]
 	selection <- getSel(expVar, n = nSel, high = TRUE)
 	if(nProgeny > 1) selection <- rep(selection, each = nProgeny)
@@ -522,9 +482,18 @@ genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm
 # mean(diag(genCov(M, u)))
 
 
+getTotalIntensity <- function(x) {
+    S <- x$vy - x$gv[x$RGSCyr - 1]
+	i <- S / x$Vg[x$RGSCyr - 1]
+	list(S = S, i = i)
+}
 
 
-getPopStats <- function(resultL, meanVariety = TRUE){
+# note:
+# all(abs((x$bv + x$mu) -  (x$gv_a + x$gv_mu)) < 1e-14)
+
+# resultL <- simrun[[1]]
+getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
     VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
     RGSCparam <- lapply(resultL[["RGSC"]], genParam)
     # pop <- list(RGSC = RGSCparam, VDP = VDPparam)
@@ -536,26 +505,42 @@ getPopStats <- function(resultL, meanVariety = TRUE){
     Rcyc <- c(0, 1:(GScylcePerYr * nYr))
 
     VgRGSC <- sapply(RGSCparam, "[[", "varG")
-    # gvRGSC <- sapply(pop[["RGSC"]], function(x) mean(x$gv_a)) # this is misleading
+    # gvRGSC <- sapply(pop[["RGSC"]], function(x) mean(x$gv_a)) # this is misleading. Why?
     gvRGSC <- sapply(RGSCparam, function(x) mean(x$gv_a) + x$gv_mu) # this is correct
+    sRGSC <- gvRGSC[-1] - gvRGSC[-length(gvRGSC)]
+    iRGSC <- sRGSC / sqrt(VgRGSC[-length(VgRGSC)])
+
+    VgVDP <- rlapply(VDPparam, "[[", i = "varG", level = 2, combine = c)
+    gvVDP <- rlapply(VDPparam, function(x) mean(x$gv_a) + x$gv_mu, level = 2, combine = c)
+    sVDP <- gvVDP$variety - gvVDP$trial1
+    iVDP <- sVDP / sqrt(VgVDP$trial1)
+  
+  	sTotal <- gvVDP$variety - gvRGSC[Ryr - 1]
+	iTotal <- sTotal / sqrt(VgRGSC[Ryr - 1])
+
     gvVariety <- lapply(VDPparam[["variety"]], function(x) x$gv_a + x$gv_mu)
     SDgRGSC <- sqrt(VgRGSC)
-   
-    if (meanVariety){
-      Yvariety <- sapply(gvVariety, mean)
-      Xvariety <- Ryr[1:length(Yvariety)]
-    } else {
-      nVariety <- sapply(gvVariety, nrow)
-      Yvariety <- unlist(gvVariety)
-      Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety)
-    }
-    acc <- resultL$predAcc[["RGSC"]]
+
+    varMean <- gvVDP[["variety"]]
+	nVariety <- sapply(gvVariety, nrow)
+	Yvariety <- unlist(gvVariety)
+	Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety)
+
+    RGSCacc <- resultL$predAcc[["RGSC"]]
+    # add VDP pred acc here! for skipping gens
+    # if(any(names(resultL$predAcc)) VDPacc <- 
     theorMax <- maxBv(resultL$SP)
-    return(list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, Vg = VgRGSC, gv = gvRGSC, sd = SDgRGSC, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, acc = acc, theorMax = theorMax))
+	
+	nVar = unique(nVariety)
+
+    return(list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, varMean = varMean, sdRGSC = SDgRGSC, 
+				VgRGSC = VgRGSC, VgVDP = VgVDP, gvRGSC = gvRGSC, gvVDP = gvVDP,
+    			sRGSC = sRGSC, iRGSC = iRGSC, sVDP = sVDP, iVDP = iVDP, sTotal = sTotal, iTotal = iTotal, 
+    			nVar = nVar, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, RGSCacc = RGSCacc, theorMax = theorMax))
 }
 
 
-getYrange <- function(simR) range(c(simR$gv + simR$sd, simR$gv - simR$sd, simR$vy))
+getYrange <- function(simR) range(c(simR$gv + simR$sdRGSC, simR$gv - simR$sdRGSC, simR$vy))
 
 invertList <-  function(ll) {
     nms <- unique(unlist(lapply(ll, function(X) names(X))))
@@ -564,15 +549,15 @@ invertList <-  function(ll) {
     lapply(ll, function(X) X[!sapply(X, is.null)])
 }
 
-plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", alpha = "0D", alphaMean = "0D", pch = 1){
+plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", alpha = "0D", alphaMean = "0D", pch = 1) {
 	polycol <- paste0(popcol, alphaMean)
 	popcol <- paste0(popcol, alpha)
 	# attach(simL)
 	xpoly <- c(Rgen, rev(Rgen), Rgen[1])
-	ypoly <- c(simL$gv + simL$sd, rev(simL$gv - simL$sd), simL$gv[1] + simL$sd[1])
+	ypoly <- c(simL$gvRGSC + simL$sdRGSC, rev(simL$gvRGSC - simL$sdRGSC), simL$gvRGSC[1] + simL$sdRGSC[1])
 
 	polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
-	lines(x = Rgen, y = simL$gv, type = "l", col = popcol, lwd = 2)
+	lines(x = Rgen, y = simL$gvRGSC, type = "l", col = popcol, lwd = 2)
 	points(simL$vx, simL$vy, col = popcol, pch = pch)
     if (vLine == "linear") {
 		abline(with(simL, lm(vy ~ vx)), col = popcol, lwd = 2)
@@ -590,11 +575,11 @@ plotPop <- function(simL, Rgen = RGSCgen, vLine = "none", popcol = "#000000", al
 }
 
 
-getIntensity <- function(x) {
-    S <- x$vy - x$gv[x$RGSCyr - 1]
-	i <- S / x$Vg[x$RGSCyr - 1]
-	list(S = S, i = i)
-}
+# getTotalIntensity <- function(x) {
+#     S <- x$vy - x$gv[x$RGSCyr - 1]
+# 	i <- S / x$Vg[x$RGSCyr - 1]
+# 	list(S = S, i = i)
+# }
 
 # plotIntensity <- function(simL, x, popcol = "#000000"){
 
@@ -604,10 +589,12 @@ getIntensity <- function(x) {
 #     legend("topright", legend = c("Vg", "S"), lty = c(1, 2))
 # }
 
-# popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE; plotVg = TRUE; plotSelInt = TRUE
-simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = FALSE, legendPos = "topleft", plotReps = FALSE, plotVg = TRUE, plotSelInt = TRUE){
-    avgInGen <- function(x) lapply(x, function(xx) tapply(xx, rep(1:(length(xx)/ nVar), each = nVar), mean))
+# popList <- list(p1 = simrun, p2 = simrun)
 
+# popLabs = NULL; varLine = "connect"; meanVariety = TRUE; legendPos = "topleft"; plotReps = FALSE; plotVg = TRUE; plotSelInt = TRUE
+simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none", meanVariety = TRUE, legendPos = "topleft", plotReps = FALSE, plotVg = TRUE, plotSelInt = TRUE){
+
+	# cols = c("#000000", "#000000")
     if (length(cols) != length(popList)) stop("cols must be same length as popList!")
     lineCol <- paste0(cols, "FF")
     ptCol <- paste0(cols, "FF")
@@ -615,15 +602,14 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
 
     if (is.null(popLabs)) popLabs <- names(popList)
 
-  	nVar <- tail(with(popList[[1]][[1]][["paramL"]], nFam * famSize * cumprod(selectTrials)), 1)
-    cyclePerYr <- popList[[1]][[1]][["paramL"]][["cyclePerYr"]]
-    simStats <- lapply(popList, function(x) lapply(x, function(xx) xx[!names(xx) %in% c("SP", "paramL")]))
-	# this is fucking hacky.................... UGH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (meanVariety) {
-    	for (i in 1:length(simStats)) {
-    		for (j in 1:length(simStats[[i]])) simStats[[i]][[j]][c("vy", "vx")] <- avgInGen(simStats[[i]][[j]][c("vy", "vx")])
-    	}
-    }
+  	# nVar <- tail(with(popList[[1]][[1]][["paramL"]], nFam * famSize * cumprod(selectTrials)), 1)
+  	nVar <- unique(unlist(rlapply(popList, "[[", i = "nVar", level = 2, combine = c)))
+    cyclePerYr <- unique(unlist(rlapply(popList, function(x) x[["paramL"]][["cyclePerYr"]], level = 2, combine = c)))
+    if(length(nVar) > 1) warning("number of varieties differ between pops!")
+    if(length(nVar) > 1) warning("cycles per year differ between pops!")
+
+    simStats <- lapply(popList, function(x) lapply(x, function(xx) xx[!names(xx) %in% c("SP", "paramL", "VgVDP", "gvVDP")]))
+
     simStatsInv <- lapply(simStats, invertList)
     simReps <- rlapply(simStatsInv, level = 3, combine = rbind) 
     simAvg <- rlapply(simReps, f = colMeans, level = 2, na.rm = TRUE)
@@ -634,6 +620,9 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
     xlims <- range(c(0, RGSCgen))
     ylims <- range(sapply(simReps, getYrange)) * 1.1
 
+    if (meanVariety) {
+    	simAvg <- lapply(simAvg, function(x) {x[["vy"]] <- x[["varMean"]]; x[["vx"]] <- x[["RGSCyr"]]; x})
+    }
     # plot means of RGSC and VDP output
     plot(NA, xlim = xlims, ylim = ylims, xaxt = "n", xlab = "generation", ylab = "standardized genetic value")
     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
@@ -655,7 +644,7 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
         )
 	}
 	if(plotVg){
-		ylims2 <- c(0, max(sapply(simAvg, "[[", "Vg")))
+		ylims2 <- c(0, max(sapply(simAvg, "[[", "VgRGSC")))
 		plot(NA, xlim = xlims, ylim = ylims2, xaxt = "n", xlab = "generation", ylab = "Vg", main = "Genetic variance across generations")
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    for (i in 1:length(simAvg)) {
@@ -665,28 +654,69 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
 	}
 
 
-# check for selection intensity off by one
-	if(plotSelInt){
-		selInt <- lapply(simAvg, getIntensity)
-		S <- lapply(selInt, "[[", "S")
-		int <- lapply(selInt, "[[", "i")
-		ylims3 <- range(unlist(S))
-		# ylims4 <- range(unlist(int))
-		ylims4 <- c(-2, max(unlist(int)))
 
-		plot(NA, xlim = xlims, ylim = ylims3, xaxt = "n", xlab = "generation", ylab = "S", main = "Selection differential across generations")
+# THIS NEEDS TO BE CLEANED UP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	if(plotSelInt){
+		# for(j in c("sVDP", "iVDP", "sRGSC", "iRGSC"){
+		# 	si <- lapply(simAvg, "[[", j)
+		# 	ylimsSi <- range(c(0, unlist(si)))
+	
+		# 	plot(NA, xlim = xlims, ylim = ylims3, xaxt = "n", xlab = "generation", ylab = "S", main = "Selection differential across generations")
+		#     axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+		    
+		#     for (i in 1:length(sRGSC)) {
+		#     	lines(RGSCyr, sVDP[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+		#     }	
+		#     legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
+
+
+		# }
+
+
+		# selInt <- lapply(simAvg, getIntensity)
+		sVDP <- lapply(simAvg, "[[", "sVDP")
+		iVDP <- lapply(simAvg, "[[", "iVDP")
+		sRGSC <- lapply(simAvg, "[[", "sRGSC")
+		iRGSC <- lapply(simAvg, "[[", "iRGSC")
+
+		ylims3 <- range(unlist(sVDP))
+		# ylims4 <- range(unlist(int))
+		ylims4 <- c(-2, max(unlist(iVDP)))
+
+		ylims5 <- range(unlist(sRGSC))
+		# ylims4 <- range(unlist(int))
+		ylims6 <- c(-2, max(unlist(iRGSC)))
+
+
+		plot(NA, xlim = xlims, ylim = ylims3, xaxt = "n", xlab = "generation", ylab = "S", main = "Selection differential across generations in VDP")
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    
-	    for (i in 1:length(S)) {
-	    	lines(RGSCyr, S[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    for (i in 1:length(sRGSC)) {
+	    	lines(RGSCyr, sVDP[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
 	    }	
 	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 
-	   	plot(NA, xlim = xlims, ylim = ylims4, xaxt = "n", xlab = "generation", ylab = "S/Vg", main = "Selection intensity across generations")
+	   	plot(NA, xlim = xlims, ylim = ylims4, xaxt = "n", xlab = "generation", ylab = "S/Vg", main = "Selection intensity across generations in VDP")
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    
-	    for (i in 1:length(int)) {
-	    	lines(RGSCyr, int[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    for (i in 1:length(iVDP)) {
+	    	lines(RGSCyr, iVDP[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    }
+
+	    legend("topleft", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
+		plot(NA, xlim = xlims, ylim = ylims5, xaxt = "n", xlab = "generation", ylab = "S", main = "Selection differential across generations in RGSC")
+	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+	    
+	    for (i in 1:length(sRGSC)) {
+	    	lines(RGSCgen[-1], sRGSC[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    }	
+	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
+
+	   	plot(NA, xlim = xlims, ylim = ylims6, xaxt = "n", xlab = "generation", ylab = "S/Vg", main = "Selection intensity across generations in RGSC")
+	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
+	    
+	    for (i in 1:length(iRGSC)) {
+	    	lines(RGSCgen[-1], iRGSC[[i]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
 	    }
 	    legend("topleft", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 	}
