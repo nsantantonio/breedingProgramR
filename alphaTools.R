@@ -515,8 +515,9 @@ getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
     sVDP <- gvVDP$variety - gvVDP$trial1
     iVDP <- sVDP / sqrt(VgVDP$trial1)
   
-  	sTotal <- gvVDP$variety - gvRGSC[Ryr - 1]
-	iTotal <- sTotal / sqrt(VgRGSC[Ryr - 1])
+  	RyrIndex <- Ryr - GScylcePerYr + 1
+  	sTotal <- gvVDP$variety - gvRGSC[RyrIndex]
+	iTotal <- sTotal / sqrt(VgRGSC[RyrIndex])
 
     gvVariety <- lapply(VDPparam[["variety"]], function(x) x$gv_a + x$gv_mu)
     SDgRGSC <- sqrt(VgRGSC)

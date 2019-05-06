@@ -57,6 +57,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 	if (!is.null(skip)) skip <- trials[skip]
 
 	if(traditional) {
+		selectIn <- "pheno"
 		# selectOut <- "pheno" # can still use markers in traditional program...
 		cyclePerYr <- 1
 	}
