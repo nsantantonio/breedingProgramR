@@ -401,6 +401,7 @@ acOpt <- function(x, n, targetFunc, pherFunc, xAt0 = FALSE, evapRate = 0.05, nAn
 
 # pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; acTrunc = 1; evapRate = 0.05; nAnts = 500; pherPower = 1.5; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; nProgeny = 1
 ACquant <- function(pop, GSfit, nSel, nCrosses, use, acTrunc = 1, evapRate = 0.05, nAnts = 500, pherPower = 1.5, verbose = FALSE, nProgeny = 1, ...){
+	if(is.character(use)) use <- match.fun(use)
 	n <- nInd(pop)
 	if (n < nSel) nSel <-  n
 	nCombos <- choose(nSel, 2)

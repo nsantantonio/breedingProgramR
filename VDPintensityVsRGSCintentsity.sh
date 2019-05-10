@@ -43,7 +43,7 @@ for i in {0..3}; do
             "trialReps=${trialReps[$i]}" \
             "trialLocs=${trialLocs[$i]}" \
             "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-        # Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt &
+        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt &
     done
         tmpSimName="VDPvsRGSCintensity_trad_vdp${nFam[$i]}x${famSize[$i]}"
         args[1]="simName=$tmpSimName"
@@ -68,7 +68,7 @@ for i in {0..3}; do
             "trialReps=${trialReps[$i]}" \
             "trialLocs=${trialLocs[$i]}" \
             "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-        # Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt &
+        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt &
     done
         tmpSimName="VDPvsRGSCintensityACquant_trad_vdp${nFam[$i]}x${famSize[$i]}"
         args[1]="simName=$tmpSimName"
