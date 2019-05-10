@@ -349,7 +349,7 @@ gsQuant <- function(sel, ebvs, sigma = 2, w = 0.5, nCrosses = 100, nProgenyPerCr
 acOpt <- function(x, n, targetFunc, pherFunc, xAt0 = FALSE, evapRate = 0.05, nAnts = 500, maxIter = 300, countThresh = 1000, showResult = FALSE, pherPower = 1, dumbAnt = FALSE, plateau = 100, returnStats = FALSE){
 	evap <- function(oldP, newP, evapRate) {(1 - evapRate) * oldP + newP }
 
-	if(is.matrix(x)) {if(ncol(x) == 1) x <- c(x) else stop("I cant handle multiple traits yet!")}
+	if(is.matrix(x)) {if(ncol(x) == 1) x <- c(x) else stop("I cant handle multiple traits yet! dim = ", dim(x))}
 	
 	if(xAt0){
 		minx <- min(x)
@@ -413,7 +413,7 @@ ACquant <- function(pop, GSfit, nSel, nCrosses, use, acTrunc = 1, evapRate = 0.0
 	if (n == nSel) {
 		selectedParents <- 1:n
 	} else {
-		selectedParents <- acOpt(ebv(pop), n = nSel, xAt0 = TRUE, targetFunc = popQuant, pherFunc = pherFuncMax, evapRate = evapRate, nAnts = nAnts, pherPower = pherPower)
+		selectedParents <- acOpt(use(pop), n = nSel, xAt0 = TRUE, targetFunc = popQuant, pherFunc = pherFuncMax, evapRate = evapRate, nAnts = nAnts, pherPower = pherPower)
 	}
 	selection <- randomCross(pop[selectedParents], nFam = nCrosses, nProgeny = nProgeny)
 
