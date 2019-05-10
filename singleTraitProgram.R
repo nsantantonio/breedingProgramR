@@ -9,7 +9,7 @@ defArgs <- list(
 	seed = 12345,
 	nThreads = 11, 
 	projName = NULL, 
-	simName = "simNoTitle",
+	simName = "testACquant",
 	simFunc = "fitFuncSingleVariate.R", 
 	maxIter = 1000L,
 	reps = 10,
@@ -30,7 +30,7 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar
+	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar, ACquant
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
@@ -126,8 +126,10 @@ if(testRun){
 	# altArgs <- c(altArgs, "maxCrossPerParent", "weight", "GSfunc", "maxIter")
 
 	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
+	run1$gvRGSC
+	# run1$gvVDP
 	run1$gv
-	run1$vy
+	run1$varMean
 
 	reps <- 2
 	setMKLthreads(10)

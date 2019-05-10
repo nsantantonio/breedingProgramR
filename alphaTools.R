@@ -283,6 +283,8 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 }
 
 
+
+
 # select pairs
 # use = ebv; nSel = selectRGSCi; pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; quant = xInt; nCrosses = nNuclear
 # returnQuant = TRUE; weightLoci = FALSE; pullGeno = pullSnpGeno; Gvar = estVg; w = 0.5; nProgeny = 1
@@ -327,6 +329,107 @@ expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = T
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
 	makeCross(pop, crossPlan = selection)
 }
+##############
+
+#############
+
+pherFuncID <- function(x, p) {x}
+pherFuncMax <- function(x, p) {(x / max(x))^p}
+quant <- function(x, sigma, w) {w * mean(x) + (1 - w) * sigma * sd(x)}
+popQuant <- function(sel, ebvs, sigma = 2, w = 0.5) {quant(x = ebvs[sel], sigma = sigma, w = 0.5)}
+initFunc <- function(x) {rep(1, length(x))} # can change later 
+gsQuant <- function(sel, ebvs, sigma = 2, w = 0.5, nCrosses = 100, nProgenyPerCross = 1) {
+	if(!all(ebv(pop[sel]) == ebvs[sel])) stop("ebvs of pop dont match those of ant!")
+	simCrosses <- randomCross(pop[sel], nFam = nCrosses, nProgeny = nProgenyPerCross)
+	simPop <- makeCross(pop[sel], simCrosses)
+	simPop <- setEBV(simPop, GSfit)
+	quant(ebv(simPop), sigma = sigma, w = w)
+}
+
+acOpt <- function(x, n, targetFunc, pherFunc, xAt0 = FALSE, evapRate = 0.05, nAnts = 500, maxIter = 300, countThresh = 1000, showResult = FALSE, pherPower = 1, dumbAnt = FALSE, plateau = 100, returnStats = FALSE){
+	evap <- function(oldP, newP, evapRate) {(1 - evapRate) * oldP + newP }
+
+	if(is.matrix(x)) {if(ncol(x) == 1) x <- c(x) else stop("I cant handle multiple traits yet!")}
+	
+	if(xAt0){
+		minx <- min(x)
+		x <- x - minx
+	}
+	N <- length(x)
+	pheromone <- initFunc(x)
+
+	bestAnt <- NULL
+	noP = rep(0, N)
+	bestestPath = 0
+	lastBestPath <- bestestPath
+	pathCounter = 0 
+	iter = 0
+	if(showResult) {
+		plotBest <- NULL 
+		plotMean <- NULL 
+	}
+
+	while(pathCounter <= countThresh & iter < maxIter){
+		iter = iter + 1
+		ant <- list()
+		path <- list()
+		antPheromone <- list()
+		for(i in 1:nAnts){
+			ant[[i]] <- sample(1:N, n, prob = pheromone / sum(pheromone))
+			path[[i]] <- targetFunc(sel = ant[[i]], ebvs = x)
+			# path[[i]] <- quant(x[ant[[i]]], sigma = 2, w = 0.5)
+			Pi <- noP
+			Pi[ant[[i]]] <- path[[i]]
+			antPheromone[[i]] <- Pi
+		}
+		bestPath <- which.max(path)
+		if (path[[bestPath]] == lastBestPath) {
+			pathCounter <- pathCounter + 1
+		} else {
+			lastBestPath <- path[[bestPath]]
+			pathCounter <- 0
+		}
+		if(path[[bestPath]] >= bestestPath) {
+			bestestPath <- path[[bestPath]] 
+			bestAnt <- ant[[bestPath]]
+		}
+		newPheromone <- pherFunc(Reduce("+", antPheromone), p = pherPower)	
+		pheromone <- evap(pheromone, newPheromone, evapRate = evapRate)
+	}
+	return(bestAnt)
+}
+
+# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; acTrunc = 1; evapRate = 0.05; nAnts = 500; pherPower = 1.5; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; nProgeny = 1
+ACquant <- function(pop, GSfit, nSel, nCrosses, use, acTrunc = 1, evapRate = 0.05, nAnts = 500, pherPower = 1.5, verbose = FALSE, nProgeny = 1, ...){
+	n <- nInd(pop)
+	if (n < nSel) nSel <-  n
+	nCombos <- choose(nSel, 2)
+	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
+	# maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
+	popVar <- varA(pop)
+	popMean <- mean(gv(pop))
+
+	if (acTrunc < 1) pop <- truncSel(pop, nSel = n * acTrunc, use = use)
+	if (n == nSel) {
+		selectedParents <- 1:n
+	} else {
+		selectedParents <- acOpt(ebv(pop), n = nSel, xAt0 = TRUE, targetFunc = popQuant, pherFunc = pherFuncMax, evapRate = evapRate, nAnts = nAnts, pherPower = pherPower)
+	}
+	selection <- randomCross(pop[selectedParents], nFam = nCrosses, nProgeny = nProgeny)
+
+	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+	newpop <- makeCross(pop, crossPlan = selection) 
+	if(verbose){
+		cat("Selected population variance diff:", {varA(newpop) - popVar}, "\n")
+		cat("Selected population mean diff:", {mean(gv(newpop)) - popMean}, "\n")
+	}
+	newpop
+}
+
+
+
+
 
 # select and cross
 # expDistSel <- function(nSel, pop, GSfit, quant, nProgeny = 1, distFunc = expDist, pullGeno = pullSnpGeno, Gvar = varA, w = 0.5, ...) {
@@ -347,7 +450,7 @@ randomCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random s
 	allCrosses <- combn(pop@id, 2)
 	resample <- if (nFam > ncol(allCrosses)) TRUE else FALSE 
 	crosses <- allCrosses[, sample(1:ncol(allCrosses), nFam, replace = resample)]
-	if (famSize > 1) crosses[, rep(1:nFam, each = nProgeny)]
+	if (nProgeny > 1) crosses[, rep(1:nFam, each = nProgeny)]
 	t(crosses)
 }
 

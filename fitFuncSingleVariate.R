@@ -143,9 +143,11 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# use selected lines from last trial to make new crosses. Not sure this timeline is realistic...
 
 			if(traditional & i > 1) {
-				lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
+				# lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
 				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "lines selected out of VDP", lastVDPSel, "for making crosses \n")
 			} else {
+				# THIS DOES NOT MKE SENSE TO ME!!!!
+				# if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
 				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
 			}
 			if(is.null(selFuncOut)){
@@ -153,7 +155,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
 				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, ...))
+												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar))#, ...))
 												  # pullGeno = pullGenoFunc, w = weight))
 			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
@@ -201,8 +203,10 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# if(traditional) 
 			for (j in cycle){
 				if(traditional) {
+					# Ok, this is a problem. I need to add 'returnToRGSC' here. I htink I need to restructure how the RGSC works for a traditional program. It just needs to hold cross candidates. 
 					lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
 					selPop <- VDP[[lastVDPSel]][[length(VDP[[lastVDPSel]])]] 
+
 				} else {
 					if (j != cycle[1]) RGSC[[gen(j-1)]] <- setEBV(RGSC[[gen(j-1)]], GSmodel[[lastGSmodel]], simParam = simParam)
 					predAcc[["RGSC"]][[gen(j-1)]] <- getAcc(RGSC[[gen(j-1)]])
@@ -213,7 +217,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
 					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, ...))
+					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar))#, ...))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) stop("nNuclear isnt right...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
@@ -232,12 +236,12 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			# GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
 			
 			if(!is.null(GSfunc)){
-				GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+				GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
 			} else {
 				if(nInd(train) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
-					GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+					GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
 				} else {
-					GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter, ...))
+					GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
 				}
 			}
 		} 
@@ -268,7 +272,8 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 						addToRGSC[[gen(g)]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = returnVDPtoRGSC[genBack[g]], trait = 1, use = returnVDPcrit, returnPop = TRUE) 
 					}
 					if (length(addToRGSC) > 0){
-						addToRGSC <- Reduce(c, addToRGSC)
+						# addToRGSC <- Reduce(c, addToRGSC) # double check this works! not sure how long that Reduce was used here...
+						addToRGSC <- mergePopsRec(addToRGSC)
 						RGSC[[gen(cycle[1] - 1)]] <- c(RGSC[[gen(cycle[1] - 1)]], addToRGSC)
 					}
 				}
