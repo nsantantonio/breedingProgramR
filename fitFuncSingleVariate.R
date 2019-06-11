@@ -23,14 +23,34 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 						"trialLocs", "cyclePerYr", "returnVDPtoRGSC", "nChrom", "nLoci", "nM", "nQTL")
 		if (!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
 	}
+	
 	for (p in names(paramL)) assign(p, paramL[[p]])
 	
+	selFuncStop <- c("selFuncIn is a list, but of the wrong structure. Please provide either a single function, a list of functions for each cycle, 
+				for each year, or a nested list of length nYr with each element of length cyclePerYr")
+	if(is.list(selFuncIn)) {
+		if (length(selFuncIn) %in% c(cyclePerYr, nYr, cyclePerYr * nYr)) {
+			if(all(sapply(selFuncIn, class) == "list")){
+				if (!all(unique(sapply(selFuncIn, length)) == cyclePerYr)) stop(selFuncStop)
+			}
+			if(length(selFuncIn) == cyclePerYr) selFuncIn <- rep(list(selFuncIn), nYr)
+			if(length(selFuncIn) == nYr) selFuncIn <- lapply(1:nYr, function(x) rep(list(selFuncIn[[x]]), cyclePerYr))
+		} else {
+			stop(selFuncStop)
+		}
+	} else {
+		if(!is.null(selFuncIn)) selFuncIn <- rep(list(rep(list(selFuncIn), cyclePerYr)), nYr)
+	}
+	if(any(sapply(unlist(selFuncIn), function(x) identical(x, solqp)))) require(LowRankQP)
+
 	if(!(length(selectRGSC) == 1 | length(selectRGSC) == nYr)) stop("'selectRGSC' must be of length 1 or nYr!")
 	if(all(selectRGSC <= 1)) {
 		selectRGSC <- nNuclear * selectRGSC
 		if(selectRGSC %% 1 != 0) selectRGSC <- round(selectRGSC)
 		deltaRGSC <- if(length(selectRGSC) == nYr) TRUE else FALSE
 	}
+
+	if(nFounder < nInd(founderPop)) founderPop <- founderPop[sample(1:nInd(founderPop), nFounder)]
 
 	if (selF2 & cyclePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'cyclePerYr' to 1")
 	# if (selF2 & is.null(selFunc)) warning("Selection on F2 is being performed, but not on expected quantiles, you probably want to set selQuantile = TRUE")
@@ -120,7 +140,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
-	# for (i in 1:6) { 
+	# for (i in 1:10) { 
 		# i = 1
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
@@ -141,24 +161,24 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 			}
 			
 			# use selected lines from last trial to make new crosses. Not sure this timeline is realistic...
-
-			if(traditional & i > 1) {
-				# lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
-				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "lines selected out of VDP", lastVDPSel, "for making crosses \n")
-			} else {
-				# THIS DOES NOT MKE SENSE TO ME!!!!
-				# if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
-				if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
-			}
 			if(is.null(selFuncOut)){
 				selToP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = selectOut)
 			} else {
 			# select out of RGSC, on mean, expected quantile, etc...
 				selToP <- do.call(selFuncOut, getArgs(selFuncOut, nSel = nFam, pop = RGSC[[lastRGSCgen]], GSfit = GSmodel[[lastGSmodel]], 
-												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar))#, ...))
+												  trait = 1, use = selectOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, ...))
 												  # pullGeno = pullGenoFunc, w = weight))
 			}
 			if(nInd(selToP) != nFam) stop("selToP is wrong...")
+
+			if(traditional & i > 1) {
+				# lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
+				if(verbose) cat("        ", nInd(selToP), "lines selected out of VDP", lastVDPSel, "for making crosses \n")
+			} else {
+				# THIS DOES NOT MKE SENSE TO ME!!!!
+				# if(verbose) cat("        ", nInd(RGSC[[lastRGSCgen]]), "individuals selected out of", nNuclear, " RGSC population \n")
+				if(verbose) cat("        ", nInd(selToP), "individuals selected out of", nInd(RGSC[[lastRGSCgen]]), " RGSC population \n")
+			}
 			
 			# (mean(ebv(selToP)) - mean(ebv(RGSC[[lastRGSCgen]]))) / sd(ebv(RGSC[[lastRGSCgen]]))
 			# Determine number of individuals to select within familiy (default is all)
@@ -202,6 +222,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 		if (i <= nYr){
 			# if(traditional) 
 			for (j in cycle){
+				jp <- which(cycle == j)
 				if(traditional) {
 					# Ok, this is a problem. I need to add 'returnToRGSC' here. I htink I need to restructure how the RGSC works for a traditional program. It just needs to hold cross candidates. 
 					lastVDPSel <- tail(names(VDP)[sapply(VDP, length) > 0], 1)
@@ -216,9 +237,10 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 				if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = selectIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
-					RGSC[[gen(j)]] <- do.call(selFuncIn, getArgs(selFuncIn, nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar))#, ...))
-					if(nInd(RGSC[[gen(j)]]) != nNuclear) stop("nNuclear isnt right...")
+					RGSC[[gen(j)]] <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
+					trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, ...))
+					# trait = 1,  use = selectIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, fthresh = 0.1))
+					if(nInd(RGSC[[gen(j)]]) != nNuclear) cat("Only", nInd(RGSC[[gen(j)]]), "crosses made in RGSC...\n")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
@@ -232,7 +254,7 @@ sim <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbos
 
 			# concatenate training set and train GS model
 	 		train <- mergePopsRec(trnSet) 
-			cat("training set has ", train@nInd, "individuals...\n")	
+			cat("training set has", train@nInd, "individuals...\n")	
 			# GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
 			
 			if(!is.null(GSfunc)){

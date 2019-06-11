@@ -282,6 +282,93 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 	makeCross(pop, crossPlan = selection) 
 }
 
+### Need to check that truncSel even works!
+
+# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; 
+# fthresh = 0.1; allowSelf = FALSE
+
+solqp <- function(pop, GSfit, nSel, nCrosses, use, lambda, fthresh, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, maxCrossPerParent = 0, verbose = FALSE, nProgeny = 1, ...){
+	inbreedingCoef <- function(cee, Kmat) 1/2 * crossprod(cee, Kmat) %*% cee
+	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
+	betterSample <- function(x, ...) x[sample(length(x), ...)]
+	if(is.character(use)) use <- match.fun(use)
+
+	n <- nInd(pop)
+	if (n < nSel) nSel <-  n
+	nCombos <- choose(nSel, 2)
+	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
+	# maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
+	
+	# if(nSel < n) pop <- truncSel(pop, nSel = nSel, use = use)
+	M <- pullGeno(pop)
+	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
+	gebvs <- use(pop)
+	txtdensity(gebvs)
+	# gebvs <- scale(use(pop), scale = FALSE)
+
+# NEED TO ADD OPERATOR TO NOT DO THIS ONCE THE POPULATION IS FIXED!
+
+	f <- NULL
+	g <- NULL
+	cee <- list()
+	for(lambda in 1:99 * 0.01){
+		H <- 2 * lambda * K
+		d <- -(1 - lambda) * gebvs
+		A <- matrix(1, nrow = 1, ncol = n)
+		u <- matrix(1, ncol = 1, nrow = n)
+
+		log <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = 1, uvec = u, method = "LU", verbose = FALSE)))})
+		# log <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP::LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = 1, uvec = u, method = "LU", verbose = FALSE)))})
+		cee <- c(cee, list(solutionqp$alpha))
+		solutionqp$alpha
+		f <- c(f, c(inbreedingCoef(solutionqp$alpha, K)))
+		g <- c(g, c(expectedGain(solutionqp$alpha, gebvs)))
+	}
+	
+	whichLambda <- which(f == max(f[f <= fthresh]))
+	propPar <- round(cee[[whichLambda]] * 2 * nCrosses)
+	rownames(propPar) <- pop@id
+	pars <- rep(pop@id, times = propPar)
+
+	# browser()
+	parList <- list()
+	index <- 1:length(pars)
+
+	for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
+		p1 <- betterSample(index, 1)
+		samplep2 <- index[pars[index] != pars[p1]]
+		p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
+		# print(pars[c(p1, p2)])
+		if(length(p2) == 0) next
+		if(pars[p1] == pars[p2]) {cat("oops\n"); break}
+		crossi <- c(p1, p2)
+		parList[[i]] <- pars[crossi]
+		index <- index[!index %in% crossi]
+	}
+
+# length(parList)
+
+	# for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
+	# 	p1 <- betterSample(index, 1)
+	# 	if(length(index[pars[index] != pars[p1]]) == 0){
+	# 		cat("cross sampling failed. retrying...\n")
+	# 		parList <- list()
+	# 		index <- 1:length(pars)
+	# 		i <- 
+	# 	}
+	# 	p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(index[pars[index] != pars[p1]], 1)
+	# 	crossi <- c(p1, p2)
+	# 	parList[[i]] <- pars[crossi]
+	# 	index <- index[!index %in% crossi]
+	# }
+
+	selection <- do.call(rbind, parList)
+	if(verbose) print(table(selection))
+	
+	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+	makeCross(pop, crossPlan = selection) 
+}
 
 
 
@@ -461,6 +548,7 @@ randomCross <- function(pop, nFam, nProgeny = 1){ # note this is just a random s
 selectInd2 <- function(pop, nSel, use, trait = 1, selFunc = identity){
 	if(is.character(use)) use <- match.fun(use)
 	sel <- use(pop)
+	if(ncol(sel) < 1) stop("Something is wrong! I dont appear to have a phenotype/GEBV! perhaps I was never predicted?")
 	names(sel) <- pop@id
 	selection <- getSel(selFunc(sel), n = nSel)
 	pop[selection]
@@ -753,7 +841,7 @@ simPlot <- function(popList, cols = "#000000", popLabs = NULL, varLine = "none",
 		plot(NA, xlim = xlims, ylim = ylims2, xaxt = "n", xlab = "generation", ylab = "Vg", main = "Genetic variance across generations")
 	    axis(1, at = c(0, RGSCyr), labels = c(0, yr))
 	    for (i in 1:length(simAvg)) {
-	    	lines(simAvg[[i]][["Rcyc"]], simAvg[[i]][["Vg"]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
+	    	lines(simAvg[[i]][["Rcyc"]], simAvg[[i]][["VgRGSC"]], type = "l", lwd = 2, lty = 1, col = cols[[i]])
 	    }	
 	    legend("topright", legend = popLabs, col=cols, lty = 1, lwd = 2, pch = 16)
 	}

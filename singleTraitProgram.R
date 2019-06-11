@@ -8,8 +8,8 @@ defArgs <- list(
 # simulation parameters
 	seed = 12345,
 	nThreads = 11, 
-	projName = NULL, 
-	simName = "testACquant",
+	projName = "testProj", 
+	simName = "testSim",
 	simFunc = "fitFuncSingleVariate.R", 
 	maxIter = 1000L,
 	reps = 10,
@@ -30,7 +30,7 @@ defArgs <- list(
 	selectVDP = "pheno", # ebv, pheno
 	returnVDPcrit = "pheno", # ebv?
 	selFuncOut = NULL, # truncSel, expDist, simDHdist
-	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar, ACquant
+	selFuncIn = solqp, # truncCross, expDistPairs, simDHdistPairs, maxVar, ACquant
 	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
@@ -96,7 +96,8 @@ if(simpleFounder) {
 	founderPop <- quickHaplo(nFounder, nChrom, nLoci, genLen = 1, ploidy = 2L, inbred = FALSE)
 } else {
 	load(founderRData)
-	founderPop <- founderPop[sample(1:nInd(founderPop), nFounder)]
+	### NOTE, I MOVED THE FOUNDER SAMPLING INSIDE THE SIM FUNCTION SO THAT REPS WOULD BE ACROSS DIFFERENT FOUNDERS. (I.E. NO "FOUNDER" EFFECT)  
+	# founderPop <- founderPop[sample(1:nInd(founderPop), nFounder)]
 }
 
 # Setting Simulation Parameters
@@ -118,12 +119,13 @@ loci <- pullLoci(SP)
 
 testRun <- FALSE
 if(testRun){
-	# defArgs[["maxCrossPerParent"]] <- 1
 	# defArgs[["weight"]] <- 0.2
 	# altArgs <- c(altArgs, "maxCrossPerParent", "weight")
 	# defArgs[["GSfunc"]] <- RRBLUP2
 	# defArgs[["maxIter"]] <- 500L
-	# altArgs <- c(altArgs, "maxCrossPerParent", "weight", "GSfunc", "maxIter")
+	
+	defArgs[["fthresh"]] <- 0.1
+	altArgs <- c(altArgs, "fthresh")
 
 	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 	run1$gvRGSC
