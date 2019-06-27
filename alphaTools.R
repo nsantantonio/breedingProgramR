@@ -19,9 +19,39 @@ getComArgs <- function(defaultArgs = NULL) {
   }
 }
 
-
 getArgs <- function(f, ...) list(...)[names(list(...)) %in% names(formals(f))]
 
+msg <- function(n, ...) cat(do.call(paste, c(rep(list("    "), n), ..., collapse = "", sep = " ")), "\n", sep = "")
+
+
+sampleFounderPop <- function(founderPop, size, n, savePop = FALSE, seed = NULL) {
+	if(!is.null(seed)) set.seed(seed)
+	popSamples <- list()
+	for(i in 1:n){
+		samplei <- sample(1:nInd(founderPop), nFounder)
+		popSamples[[i]] <- if(savePop) founderPop[samplei] else samplei 
+	}
+	popSamples
+}
+
+
+ # nFam * famSize
+
+inbreedFunc <- function(pop, GSfit, nProgPerFam, ...) {
+	pop <- if(ssh) self(pop, nProgeny = nProgPerFam) else makeDH(pop, nDH = nProgPerFam)
+	if (withinFamInt < 1) {
+		pop <- setEBV(pop, GSmodel[[lastGSmodel]], simParam = simParam)
+		fams <- split(1:(nProgPerFam * nFam), rep(1:nFam, each = nProgPerFam))
+		faml <- list()
+		for (j in names(fams)){
+			faml[[j]] <- selectInd(pop[fams[[j]]], nInd = famSize, trait = 1, use = selectOut) 
+		}
+		pop <- mergePops(faml)		
+	}
+	# # print mean genotypic value of DH 
+	# if (verbose) print(sapply(VDP[[trials[1]]], function(x) mean(gv(x))))
+	if(nInd(pop) != nFam * famSize) stop("selToP is wrong...")
+}
 # popList <- list(1, 2, list(3, 4, list(5, 6, list(7))), list(8, list(9, 10)))
 
 # cR <- function(popList){
@@ -39,7 +69,20 @@ rSel <- function(sel) { Reduce("&", sel)  }
 maxBv <- function(simParam, traits = 1) { sapply(simParam$traits[traits], function(x) sum(abs(x@addEff))) }
 sdUnCor <- function(x) { sqrt(mean(x^2) - mean(x)^2) }
 getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
-getAcc <- function(pop) { cor(gv(pop), ebv(pop)) }
+
+
+# GPacc <- function(pop){
+# 	tr <- pop@gv
+# 	pr <- pop@ebv
+# 	if(var(pr) == 0 | var(tr) == 0) return(NA) else return(cor(tr, pr))
+# }
+
+getAcc <- function(popX, simParamX) {
+	popTrue <- gv(popX)
+	popPred <- ebv(popX)
+	if(var(c(popTrue)) == 0 | var(c(popPred)) == 0) NA else cor(popTrue, popPred)
+}
+
 dummyFunc <- function(x, retrn) { retrn }
 
 # get locus index
@@ -84,7 +127,7 @@ rlapply <- function(l, f = identity, level = 1, combine = list, counter = 1, ...
 estIntensity <- function(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = pheno, Gvar = estVg) {
 	S <- mean(pheno(VDP[[end]][[gen(i - nT)]])) - mean(pheno(VDP[[start]][[gen(i - nT)]]))
 	i <- S / sqrt(Gvar(VDP[[start]][[gen(i - nT)]]))
-	if(is.matrix(i) & prod(dim(i)) == 1) i <- i[[1]] else cat("intensity has dimensions:", dim(i), "\n")
+	if(is.matrix(i) & prod(dim(i)) == 1) i <- i[[1]] else if(is.matrix(i)) msg(2, "intensity has dimensions:", dim(i))
 	i
 }
 
@@ -148,7 +191,8 @@ getTrueBV <- function(pop, simParam, trait = 1) {
 	M %*% u
 } 
 
-getSelfVar <- function(M, u, fdiff = NULL) {
+getSelfVar <- function(M, u = NULL, fdiff = NULL) {
+	if(is.null(u)) u <- rep(1, ncol(M))
 	H <- M == 1
 	Hu <- H %*% u^2 
 	if(!is.null(fdiff)) Hu <- Hu * (1 - 2^(-fdiff))
@@ -157,7 +201,7 @@ getSelfVar <- function(M, u, fdiff = NULL) {
 }
 
 weightedQuantile <- function(mu, sigmasq, quant = 0.9, w = 0.5) {
-	cat("            weight parameter has value:", w, "\n")
+	msg(2, "            weight parameter has value:", w)
 	w * mu + (1-w) * qnorm(quant, sd = sqrt(sigmasq))
 }
 
@@ -216,7 +260,7 @@ simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, qu
 	crosses <- rep(1:nrow(parents), each = nSimCrosses)
 	popX <- makeCross(pop, parents[crosses, , drop = FALSE])
 
-	if(verbose) cat("simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
+	if(verbose) msg(2, "simulating distribution of", nDH, "DH for", nSimCrosses, "crosses for each of", nCombos, "parental pairs\n")
 	simVar <- do.call(simDHdist, getArgs(simDHdist, nSel = nInd(popX), pop = popX, GSfit = GSfit, retQuant = retQuant, quant = quant, nDH = nDH, weight = weight, returnPop = FALSE, ...))
 	if(nSimCrosses > 1) simVar <- tapply(simVar, crosses, mean)
 
@@ -224,7 +268,7 @@ simDHdistPairs <- function(nSel, pop, GSfit, nCrosses, use, retQuant = FALSE, qu
 	lenSel <- 0
 	while(lenSel < nCrosses / nEx){
 		if(lenSel > 0) {
-			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
+			msg(2, "Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
 			maxP <- maxP + 1
 		}
 		selection <- getSel(selCrit, n = nCrosses, high = TRUE, maxP = maxP)
@@ -269,7 +313,7 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 	lenSel <- 0
 	while(lenSel < nCrosses / nEx){
 		if(lenSel > 0) {
-			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
+			msg(2, "Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
 			maxP <- maxP + 1
 		}
 		selection <- getSel(selCrit, n = nCrosses, high = FALSE, maxP = maxP)
@@ -284,92 +328,268 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 
 ### Need to check that truncSel even works!
 
-# pop = RGSC[[lastRGSCgen]]; GSfit = GSmodel[[lastGSmodel]]; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; 
-# fthresh = 0.1; allowSelf = FALSE
+# pop = RGSC[[pullRGSCgen]]; GSfit = GSmodel[[pullGSmodel]]; nSel = selectRGSCi; nCrosses = nNuclear; use = ebv; pullGeno = pullSnpGeno; weightLoci = FALSE; maxCrossPerParent = 1; 
+# fthresh = 0.01; allowSelf = FALSE; maxProp = 1; gain = NULL
 
-solqp <- function(pop, GSfit, nSel, nCrosses, use, lambda, fthresh, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, maxCrossPerParent = 0, verbose = FALSE, nProgeny = 1, ...){
+
+solqp <- function(pop, GSfit, use, nCrosses, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
+	require(LowRankQP)
 	inbreedingCoef <- function(cee, Kmat) 1/2 * crossprod(cee, Kmat) %*% cee
 	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
 	betterSample <- function(x, ...) x[sample(length(x), ...)]
 	if(is.character(use)) use <- match.fun(use)
 
 	n <- nInd(pop)
-	if (n < nSel) nSel <-  n
-	nCombos <- choose(nSel, 2)
-	nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
-	# maxP <- if(maxCrossPerParent == 0 | nCombos <  nCrosses) nCrosses else maxCrossPerParent
+	# if (n < nSel) nSel <-  n
+	# nCombos <- choose(nSel, 2)
+	# nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
 	
-	# if(nSel < n) pop <- truncSel(pop, nSel = nSel, use = use)
 	M <- pullGeno(pop)
 	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
 	gebvs <- use(pop)
-	txtdensity(gebvs)
-	# gebvs <- scale(use(pop), scale = FALSE)
+	# txtdensity(gebvs)
 
-# NEED TO ADD OPERATOR TO NOT DO THIS ONCE THE POPULATION IS FIXED!
+	popTruth <- genParam(pop)
 
-	f <- NULL
-	g <- NULL
-	cee <- list()
-	for(lambda in 1:99 * 0.01){
-		H <- 2 * lambda * K
-		d <- -(1 - lambda) * gebvs
+	Vg <- popTruth$varG
+	# msg(2, "Vg:", round(popTruth$varG, 6))
+	# msg(2, "Pop Mean:", round(mean(popTruth$gv_a) + popTruth$gv_mu, 6))
+	if(var(gebvs) == 0){
+		msg(2, "No variance in GEBVs! random intermating progressing...\n")
+		selection <- randomCross(pop, nFam = nCrosses, nProgeny = nProgeny)
+	} else {
+		if(is.null(lambda) & is.null(fthresh) & is.null(gain) & is.null(truncqp)) stop("lambda {0, 1}, fthresh {>0}, gain {>0} or truncqp {>0} must be provided a value")
+		if(!is.null(gain)) lambda <- 1 else if(is.null(lambda)) lambda <- 0:100 * 0.01 else if (lambda > 1 | lambda < 0) stop("Supplied lambda values must be between 0 and 1.")
+
+		f <- NULL
+		g <- NULL
 		A <- matrix(1, nrow = 1, ncol = n)
-		u <- matrix(1, ncol = 1, nrow = n)
-
-		log <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = 1, uvec = u, method = "LU", verbose = FALSE)))})
-		# log <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP::LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = 1, uvec = u, method = "LU", verbose = FALSE)))})
-		cee <- c(cee, list(solutionqp$alpha))
-		solutionqp$alpha
-		f <- c(f, c(inbreedingCoef(solutionqp$alpha, K)))
-		g <- c(g, c(expectedGain(solutionqp$alpha, gebvs)))
+		u <- matrix(1, ncol = 1, nrow = n) * maxProp
+		b <- 1
+		log <- list()
+		cee <- list()
+		for(k in 1:length(lambda)){
+			H <- 2 * lambda[k] * K # the one half is included in the optimization. So where does the 2 come from? Should be 1?
+			d <- if(is.null(gain)) -(1 - lambda[k]) * gebvs else rep(0, length(gebvs))
+			if(!is.null(gain)) {
+				b <- c(1, gain)
+				A <- rbind(A, c(gebvs))
+			}
+			log[[k]] <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = b, uvec = u, method = "LU", verbose = FALSE)))})
+			# cee <- c(cee, list(solutionqp$alpha))
+			cee[[k]] <- solutionqp$alpha
+			f <- c(f, c(inbreedingCoef(solutionqp$alpha, K)))
+			g <- c(g, c(expectedGain(solutionqp$alpha, gebvs)))
+		}
+		# txtplot(g, f)		
+		# whichLambda <- if(fthresh < min(f)) which.min(f) else if(fthresh > max(f)) which.max(f) else which(f == max(f[f <= fthresh]))
+		if (!is.null(fthresh) & is.null(gain)) {
+			whichLambda <- if(fthresh < min(f)) which.min(f) else which(f == max(f[f <= fthresh]))
+		# } else if (is.null(fthresh) & !is.null(gain)) {
+		# 	whichLambda <- if(gain > max(g)) which.max(g) else which(g == min(g[g >= gain]))
+		} else if (!is.null(truncqp)) {
+			zero <- 1 / (2 * nCrosses)
+			nPars <- sapply(cee, function(x) sum(x >= (zero)))
+			whichLambda <- if(truncqp > max(nPars)) which.max(nPars) else which(nPars == min(nPars[nPars >= truncqp]))
+			if(length(whichLambda) > 1) whichLambda <- whichLambda[1]
+		} else {
+			whichLambda <- 1
+		}
+		msg(2, "lambda:", lambda[whichLambda])
+		propPar <- round(cee[[whichLambda]] * 2 * nCrosses)
+		rownames(propPar) <- pop@id
+		pars <- rep(pop@id, times = propPar)
+		if (length(unique(pars)) == 1){
+			selection <- do.call(rbind, rep(list(rep(unique(pars), 2)), nCrosses))
+		} else {
+			parList <- list()
+			index <- 1:length(pars)
+			for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
+				p1 <- betterSample(index, 1)
+				samplep2 <- index[pars[index] != pars[p1]]
+				p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
+				if(length(p2) == 0) next
+				if(pars[p1] == pars[p2]) {msg(2, "oops\n"); break}
+				crossi <- c(p1, p2)
+				parList[[i]] <- pars[crossi]
+				index <- index[!index %in% crossi]
+			}
+			selection <- do.call(rbind, parList)
+		}
 	}
-	
-	whichLambda <- which(f == max(f[f <= fthresh]))
-	propPar <- round(cee[[whichLambda]] * 2 * nCrosses)
-	rownames(propPar) <- pop@id
-	pars <- rep(pop@id, times = propPar)
 
-	# browser()
-	parList <- list()
-	index <- 1:length(pars)
-
-	for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
-		p1 <- betterSample(index, 1)
-		samplep2 <- index[pars[index] != pars[p1]]
-		p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
-		# print(pars[c(p1, p2)])
-		if(length(p2) == 0) next
-		if(pars[p1] == pars[p2]) {cat("oops\n"); break}
-		crossi <- c(p1, p2)
-		parList[[i]] <- pars[crossi]
-		index <- index[!index %in% crossi]
-	}
-
-# length(parList)
-
-	# for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
-	# 	p1 <- betterSample(index, 1)
-	# 	if(length(index[pars[index] != pars[p1]]) == 0){
-	# 		cat("cross sampling failed. retrying...\n")
-	# 		parList <- list()
-	# 		index <- 1:length(pars)
-	# 		i <- 
-	# 	}
-	# 	p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(index[pars[index] != pars[p1]], 1)
-	# 	crossi <- c(p1, p2)
-	# 	parList[[i]] <- pars[crossi]
-	# 	index <- index[!index %in% crossi]
-	# }
-
-	selection <- do.call(rbind, parList)
-	if(verbose) print(table(selection))
-	
-	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+	# if(verbose) print(table(selection))
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
 	makeCross(pop, crossPlan = selection) 
 }
 
+
+# qpInbreed <- function(pop, GSfit, nSel, nCrosses, use, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
+# 	require(LowRankQP)
+# 	selfVar <- function(cee, sigmaI) 1/2 * crossprod(cee, sigmaI) %*% cee
+# 	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
+# 	betterSample <- function(x, ...) x[sample(length(x), ...)]
+# 	if(is.character(use)) use <- match.fun(use)
+
+
+#  pullGeno = pullQtlGeno
+# 	weightLoci <- TRUE
+# 	n <- nInd(pop)
+# 	M <- pullGeno(pop)
+# 	sigmaI <- c(getSelfVar(M, GSfit@markerEff))
+# 	# sigmaIone <- c(getSelfVar(M))
+
+# 	# Kw <- genCov(M, u = c(GSfit@markerEff))
+# 	# K <- genCov(M)
+
+# 	# cor(diag(K), sigmaI)
+# 	# cor(diag(K), sigmaIone)
+
+# 	# cor(diag(Kw), sigmaI)
+# 	# cor(diag(Kw), sigmaIone)
+
+# 	# K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
+# 	gebvs <- use(pop)
+# 	# txtdensity(gebvs)
+# 	if(var(gebvs) == 0){
+# 		msg(2, "No variance in GEBVs! random intermating progressing...\n")
+# 		selfed <- self(pop, nProgeny = nP)
+# 	} else {
+# 		if(is.null(lambda) & is.null(fthresh) & is.null(gain) & is.null(truncqp)) stop("lambda {0, 1}, fthresh {>0}, gain {>0} or truncqp {>0} must be provided a value")
+# 		if(!is.null(gain)) lambda <- 1 else if(is.null(lambda)) lambda <- 0:100 * 0.01 else if (lambda > 1 | lambda < 0) stop("Supplied lambda values must be between 0 and 1.")
+
+# 		f <- NULL
+# 		g <- NULL
+# 		A <- matrix(1, nrow = 1, ncol = n)
+# 		u <- matrix(1, ncol = 1, nrow = n) * maxProp
+# 		b <- 1
+# 		log <- list()
+# 		cee <- list()
+# 		for(k in 1:length(lambda)){
+# 			H <- 2 * lambda[k] * diag(-sigmaI)
+# 			d <- if(is.null(gain)) -(1 - lambda[k]) * gebvs else rep(0, length(gebvs))
+# 			if(!is.null(gain)) {
+# 				b <- c(1, gain)
+# 				A <- rbind(A, c(gebvs))
+# 			}
+# 			# solutionqp <- suppressMessages(invisible(LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = b, uvec = u, method = "LU", verbose = FALSE)))
+
+# 			log[[k]] <- capture.output({solutionqp <- suppressMessages(invisible(LowRankQP(Vmat = H, dvec = d, Amat = A, bvec = b, uvec = u, method = "LU", verbose = FALSE)))})
+# 			cee[[k]] <- solutionqp$alpha
+# 			f <- c(f, c(selfVar(solutionqp$alpha, diag(sigmaI))))
+# 			g <- c(g, c(expectedGain(solutionqp$alpha, gebvs)))
+# 		}
+# 		lapply(cee, sum)
+
+# 		# txtplot(g, f)		
+# 		# whichLambda <- if(fthresh < min(f)) which.min(f) else if(fthresh > max(f)) which.max(f) else which(f == max(f[f <= fthresh]))
+# 		if (!is.null(fthresh) & is.null(gain)) {
+# 			whichLambda <- if(fthresh < min(f)) which.min(f) else which(f == max(f[f <= fthresh]))
+# 		# } else if (is.null(fthresh) & !is.null(gain)) {
+# 		# 	whichLambda <- if(gain > max(g)) which.max(g) else which(g == min(g[g >= gain]))
+# 		} else if (!is.null(truncqp)) {
+# 			zero <- 1 / (2 * nCrosses)
+# 			nPars <- sapply(cee, function(x) sum(x >= (zero)))
+# 			whichLambda <- if(truncqp > max(nPars)) which.max(nPars) else which(nPars == min(nPars[nPars >= truncqp]))
+# 		} else {
+# 			whichLambda <- 1
+# 		}
+# 		msg(2, "lambda:", lambda[whichLambda])
+
+# 		propPar <- round(cee[[whichLambda]] * 2 * nCrosses)
+# 		rownames(propPar) <- pop@id
+# 		pars <- rep(pop@id, times = propPar)
+# 		if (length(unique(pars)) == 1){
+# 			selection <- do.call(rbind, rep(list(rep(unique(pars), 2)), nCrosses))
+# 		} else {
+# 			parList <- list()
+# 			index <- 1:length(pars)
+# 			for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
+# 				p1 <- betterSample(index, 1)
+# 				samplep2 <- index[pars[index] != pars[p1]]
+# 				p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
+# 				if(length(p2) == 0) next
+# 				if(pars[p1] == pars[p2]) {msg(2, "oops\n"); break}
+# 				crossi <- c(p1, p2)
+# 				parList[[i]] <- pars[crossi]
+# 				index <- index[!index %in% crossi]
+# 			}
+# 			selection <- do.call(rbind, parList)
+# 		}
+# 	}
+
+# 	if(verbose) print(table(selection))
+# 	if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+# 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+# 	makeCross(pop, crossPlan = selection) 
+# }
+
+
+# lambdaOut = NULL; fthreshOut = list(0.2, NULL); gainOut = NULL; truncqpOut = list(NULL, 10); nGenOut <- 2
+# lambdaOut = NULL; fthreshOut = NULL; gainOut = NULL; truncqpOut = NULL; nGenOut <- 2
+# pop = RGSC[[pullRGSCgen]]; GSfit = GSmodel[c(pullGSmodel, lastGSmodel)]; nSel = nFam; nGenOut = nGenOut; nGenThisYr = cyclePerYr - pullCycle; trait = 1; use = useOut; quant = xInt; nProgeny = nProgenyPerCrossOut; Gvar = Gvar; fthreshOut = 0.1
+solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, limitN = FALSE, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL, truncqpOut = NULL, verbose = FALSE, simParam, ...){
+	params <- list(lambdaOut = lambdaOut, fthreshOut = fthreshOut, gainOut = gainOut, truncqpOut = truncqpOut)
+	for(i in names(params)){
+		if (length(params[[i]]) > 1 & !is.list(params[[i]])) stop(paste0(i, " must be length 1 or a list."))
+		if(length(params[[i]]) <= 1) params[[i]] <- rep(list(params[[i]]), nGenOut) else if(length(params[[i]]) != nGenOut) stop(paste0(i, " is the wrong length, must be 1 or cyclePerYr - pullCycle"))
+	}
+	if(nGenOut == 0){
+		pop <- selectInd(pop, nInd = nSel, use = use)
+	} else {
+		N <- if(limitN) rep(nSel, nGenOut) else c(rep(nInd(pop), nGenOut - 1), nSel)
+		gs <- 1
+		i <- 0
+		while(i < nGenOut){
+			i <- i + 1
+			if(i > nGenThisYr) gs <- 2 # this updates the GS model for the next year, but cannot exceed 2 years!
+			if(verbose) msg(2, "solqpOut GS model:", names(GSfit)[gs])
+			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i],
+						   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
+			pop <- setEBV(pop, GSfit[[gs]])
+			if(verbose) msg(2, "solqpOut Pop Mean:", round(mean(pop@gv), 6))
+			if(verbose) msg(2, "solqpOut pop size:", nInd(pop))
+		}
+	}
+	pop
+}
+
+# pop = selToP; GSfit = GSmodel[[lastGSmodel]]; trait = 1; use = useInbreed; int = withinFamInt; ssd = ssd; nProgeny = famSizei; nGenInbr = cyclePerYr
+withinFamSel <- function(pop, GSfit, use, int, nProgeny, nGenInbr, nGenThisYr, lambdaInbr = NULL, fthreshInbr = NULL, gainInbr = NULL, truncqpInbr = NULL, ssd, simParam, ...){
+	nFam <- nInd(pop)
+	nProgPerFam <- nProgeny / int
+	if (nProgPerFam %% 1 != 0) {
+		nProgPerFam <- round(nProgPerFam)
+		nSelToTrial <- round(nProgPerFam * withinFamInt)
+		msg(2, "\nNOTE: Selection intensities within familiy have been rounded to the nearest integer resulting in", nSelToTrial, "progeny per family selected from", nProgPerFam, "progeny per family\n")
+	}
+	# params <- list(lambdaInbr = lambdaInbr, fthreshInbr = fthreshInbr, gainInbr = gainInbr, truncqpInbr = truncqpInbr)
+	# for(i in names(params)){
+	# 	if (length(params[[i]]) > 1 & !is.list(params[[i]])) stop(paste0(i, " must be length 1 or a list."))
+	# 	if(length(params[[i]]) <= 1) params[[i]] <- rep(list(params[[i]]), nGenInbr) else if(length(params[[i]]) != nGenInbr) stop(paste0(i, " is the wrong length, must be 1 or cyclePerYr - pullCycle"))
+	# }
+	# pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit, use = use, nCrosses = nCrosses,
+	# 				  nProgPerFam = nProgPerFam, lambda = lambdaInbr, fthresh = fthreshInbr, gain = gainInbr, truncqp = truncInbr, ...))
+	if (ssd) {
+		i <- 0
+		while(i <= nGenInbr) {
+			nP <- if(i == 0) nProgPerFam else 1 
+			pop <- self(pop, nProgeny = nP)
+			i <- i + 1
+		}
+	} else {
+		pop <- makeDH(pop, nDH = nProgPerFam)
+	}
+
+	# if(i > nGenThisYr) gs <- 2 
+	pop <- setEBV(pop, GSfit, simParam = simParam)
+	fams <- split(1:(nProgeny * nFam), rep(1:nFam, each = nProgeny))
+	faml <- list()
+	for (j in names(fams)){
+		faml[[j]] <- selectInd(pop[fams[[j]]], nInd = nProgeny, trait = 1, use = use) 
+	}
+	mergePops(faml)
+}
 
 
 # select pairs
@@ -402,7 +622,7 @@ expDistPairs <- function(pop, GSfit, nSel, quant, nCrosses, use, returnQuant = T
 	lenSel <- 0
 	while(lenSel < nCrosses / nEx){
 		if(lenSel > 0) {
-			cat("Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
+			msg(2, "Not enough possible crosses with maxP =", maxP, "! Increasing maxP to", maxP + 1, "and retrying...\n")
 			maxP <- maxP + 1
 		}
 		# selection <- getSel(selCrit, n = nCrosses, high = FALSE, maxP = maxP) # WAIT!!!!!! should this be low???????????
@@ -509,8 +729,8 @@ ACquant <- function(pop, GSfit, nSel, nCrosses, use, acTrunc = 1, evapRate = 0.0
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
 	newpop <- makeCross(pop, crossPlan = selection) 
 	if(verbose){
-		cat("Selected population variance diff:", {varA(newpop) - popVar}, "\n")
-		cat("Selected population mean diff:", {mean(gv(newpop)) - popMean}, "\n")
+		msg(2, "Selected population variance diff:", {varA(newpop) - popVar})
+		msg(2, "Selected population mean diff:", {mean(gv(newpop)) - popMean})
 	}
 	newpop
 }
@@ -569,27 +789,27 @@ checkFit <- function(pop){
 	pop <- setEBV(pop, GSfit, simParam = simParam)
 	M <- pullSnpGeno(pop)
 
-	cat("alphaSimR RRBLUP iterations:", GSfit@iter, "\n")
+	msg(2, "alphaSimR RRBLUP iterations:", GSfit@iter)
 	
-	cat("alphaSimR RR-BLUP Vu:",  GSfit@Vu, ", Ve:", GSfit@Ve, "\n")
+	msg(2, "alphaSimR RR-BLUP Vu:",  GSfit@Vu, ", Ve:", GSfit@Ve)
 
 	require(EMMREML)
 	rr <- emmreml(y = pheno(pop), X = matrix(1, nInd(pop), 1), Z = pullSnpGeno(pop), K = diag(simParam$snpChips[[1]]@nLoci))
 	af <- getAF(pop)
-	cat("emreml RR-BLUP Vu:",  rr$Vu, ", Ve:", rr$Ve, "\n")
-	cat("Correlation of marker effect estimates:", cor(rr$u, GSfit@markerEff), "\n")
-	cat("emreml RR-BLUP Vg:", rr$Vu * sum(2 * af * (1-af)), "\n")
+	msg(2, "emreml RR-BLUP Vu:",  rr$Vu, ", Ve:", rr$Ve)
+	msg(2, "Correlation of marker effect estimates:", cor(rr$u, GSfit@markerEff))
+	msg(2, "emreml RR-BLUP Vg:", rr$Vu * sum(2 * af * (1-af)))
 	M %*% rr$u - ebv(pop) 
 
 	# max(abs(rr$u - GSfit@markerEff))
 	K <- vanRaden1()
 	mean(diag(K))
 	gblup <- emmreml(y = pheno(pop), X = matrix(1, nInd(pop), 1), Z = diag(nInd(pop)), K = K)
-	cat("emreml GBLUP Vg:",  gblup$Vu, ", Ve:", gblup$Ve, "\n")
+	msg(2, "emreml GBLUP Vg:",  gblup$Vu, ", Ve:", gblup$Ve)
 
-	cat("Prediction accuracy alphaSimR:",  getAcc(pop), "\n")
-	cat("Prediction accuracy emmreml:",  cor(gblup$u, bv(pop)), "\n")
-	cat("Correlation of emmreml and alphaSimR genetic effect estimates:",  cor(gblup$u, ebv(pop)), "\n")
+	msg(2, "Prediction accuracy alphaSimR:",  getAcc(pop))
+	msg(2, "Prediction accuracy emmreml:",  cor(gblup$u, bv(pop)))
+	msg(2, "Correlation of emmreml and alphaSimR genetic effect estimates:",  cor(gblup$u, ebv(pop)))
 	
 
 
