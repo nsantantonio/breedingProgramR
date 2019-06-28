@@ -34,7 +34,7 @@ for i in {0..3}; do
     for k in 0.01 0.005; do
         for j in 2 1 0; do
             tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout0.2_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-            args=("nThreads=50" \
+            args=("nThreads=30" \
                 "nYr=30" \
                 "simName=$tmpSimName" \
                 "projName=truncVSquadprog" \
@@ -63,7 +63,7 @@ done
 for i in {0..3}; do 
     for j in 2 1 0; do
         tmpSimName="truncVSquadprog30yr1000QTL_trunc_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-        args=("nThreads=25" \
+        args=("nThreads=30" \
             "nYr=30" \
             "simName=$tmpSimName" \
             "projName=truncVSquadprog" \
