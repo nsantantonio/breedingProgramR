@@ -13,7 +13,7 @@
 
 
 
-# k = 1; paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL
+# k = 2; paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL
 sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
 
 	# parameter checks and warnings.
@@ -48,7 +48,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	# 	}
 	# }
 	# for (f in names(funcs)) assign(f, funcs[[f]])
-	
+
 	if(is.null(pullCycle)) pullCycle <- cyclePerYr
 
 	if(is.list(selFuncIn)) {
@@ -220,9 +220,9 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				# cyclePerYr - pullCycle + delay * cyclePerYr
 				if(is.null(nGenOut)) nGenOut <- cyclePerYr - pullCycle # if longer you need to count!
 				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RGSC[[pullRGSCgen]], GSfit = GSmodel[c(pullGSmodel, lastGSmodel)], nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
-												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, verbose = verbose, ...))
+												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, verbose = verbose, ...))
 												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, fthreshOut = 0.1))#, ...))
-												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, fthreshOut = 0.2))#, ...))
+												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, fthreshOut = 0.2))#, ...))
 												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, fthreshOut = list(0.1, 0.2)))#, ...))
 												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, fthreshOut = list(0.1, NULL), truncqpOut = list(NULL, nFam)))#, ...))
 												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, lambdaOut = 0))
@@ -281,8 +281,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			} else {
 				if(is.null(nGenInbr)) nGenInbr <- cyclePerYr  
 				VDP[[trials[1]]][[gen(i)]] <- do.call(inbreedFunc[[i]], getArgs(inbreedFunc[[i]], pop = selToP, GSfit = GSmodel[[lastGSmodel]], # use last GS model here because selectOut will burn through the rest of the year. Need to make flexible if not. 
-					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
-					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
+					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
+					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
 					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, fthresh = 0.5))
 			}
 
@@ -349,8 +349,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
 					RGSC[[gen(j)]] <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, ...))
-					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, fthresh = 0.01))
+					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, ...))
+					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, fthresh = 0.01))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) msg(2, "Only", nInd(RGSC[[gen(j)]]), "crosses made in RGSC...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
@@ -400,7 +400,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 
 			# select based on ebv or phenotype
 			sel <- if (trials[genBack[g]] %in% skip) "ebv" else  useVDP
-			if (i - genI[g] < nTrial) VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = selectTrials[genBack[g]], trait = 1, use = sel, returnPop = TRUE)
+			if (i - genI[g] < nTrial) VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = min(selectTrials[genBack[g]], nInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]])), trait = 1, use = sel, returnPop = TRUE)
 			if (ssd) VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- self(VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]])
 		}
 

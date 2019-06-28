@@ -7,7 +7,7 @@ source(paste0(parDir, "/alphaTools.R"))
 defArgs <- list(
 # simulation parameters
 	seed = 12345,
-	nThreads = 11, 
+	nThreads = 30, 
 	projName = "testProj", 
 	simName = "testSim",
 	simFunc = "fitFuncSingleVariate.R", 
@@ -36,7 +36,7 @@ defArgs <- list(
 	selFuncOut = NULL, # truncSel, expDist, simDHdist, solqpOut
 	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar, ACquant solqp
 	inbreedFunc = NULL, # 
-	withinFamInt = 1, #  
+	withinFamInt = 0.5, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 # family parameters
@@ -258,7 +258,15 @@ if(system("hostname", intern = TRUE) == "Bender") {
 }
 
 
+# defArgs[["selFuncOut"]] <- solqpOut 
+# defArgs[["selFuncIn"]] <- solqp 
+# defArgs[["pullCycle"]] <- 1
+# defArgs[["fthresh"]] <- 0.01
+# defArgs[["fthreshOut"]] <- 0.2
+# altArgs <- c(altArgs, "selFuncOut","selFuncIn","pullCycle","fthresh","fthreshOut")
 
 # simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
-simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps) %dopar% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-save(simrun, SP, file = paste0(simDir, "/", simName, ".RData"))
+# simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps) %do% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
+simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps, .errorhandling='pass') %dopar% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
+msg(0, "saving results in", paste0(simDir, "/", defArgs$simName, ".RData"))
+save(simrun, SP, file = paste0(simDir, "/", defArgs$simName, ".RData"))
