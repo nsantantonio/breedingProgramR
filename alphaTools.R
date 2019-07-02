@@ -332,7 +332,7 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 # fthresh = 0.01; allowSelf = FALSE; maxProp = 1; gain = NULL
 
 
-solqp <- function(pop, GSfit, use, nCrosses, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
+solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
 	require(LowRankQP)
 	inbreedingCoef <- function(cee, Kmat) 1/2 * crossprod(cee, Kmat) %*% cee
 	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
@@ -344,12 +344,12 @@ solqp <- function(pop, GSfit, use, nCrosses, lambda = NULL, fthresh = NULL, gain
 	# nCombos <- choose(nSel, 2)
 	# nEx <- if(nCombos < nCrosses) ceiling(nCrosses / nCombos) else 1 
 	
-	M <- pullGeno(pop)
-	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)
+	M <- pullGeno(pop, simParam = simParam)
+	K <- if(weightLoci) genCov(M, u = c(GSfit@markerEff)) else genCov(M)	
 	gebvs <- use(pop)
 	# txtdensity(gebvs)
 
-	popTruth <- genParam(pop)
+	popTruth <- genParam(pop, simParam = simParam)
 
 	Vg <- popTruth$varG
 	# msg(2, "Vg:", round(popTruth$varG, 6))
@@ -420,7 +420,7 @@ solqp <- function(pop, GSfit, use, nCrosses, lambda = NULL, fthresh = NULL, gain
 
 	# if(verbose) print(table(selection))
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	makeCross(pop, crossPlan = selection) 
+	makeCross(pop, crossPlan = selection, simParam = simParam) 
 }
 
 
