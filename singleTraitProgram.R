@@ -23,6 +23,8 @@ defArgs <- list(
 	founderh2 = 0.3,
 	simpleFounder = FALSE,
 	founderBurnIn = 1,
+	founderReps = 1,
+	founderKeep = 5,
 # selection parameters
 	selectRGSC = 0.2,
 	pullCycle = 1, 
@@ -36,7 +38,7 @@ defArgs <- list(
 	selFuncOut = NULL, # truncSel, expDist, simDHdist, solqpOut
 	selFuncIn = NULL, # truncCross, expDistPairs, simDHdistPairs, maxVar, ACquant solqp
 	inbreedFunc = NULL, # 
-	withinFamInt = 0.5, #  
+	withinFamInt = 1, #  
 	setXint = NULL, # note that x is the cdf of a normal 
 	skip = NULL,
 # family parameters
@@ -50,14 +52,14 @@ defArgs <- list(
 # genetic parameters
 	Vg = 1,
 	updateVg = FALSE,
-	h2 = c(0.1, 0.3, 0.3, 0.3, 0.3),
+	h2 = c(0.3, 0.3, 0.3, 0.3),
 # program parameters
 	nYr = 30,
-	selectTrials = c(0.5, 0.5, 0.4, 0.3, 1/3),
-	trialReps = c(1, 1, 2, 3, 3),
-	trialLocs = c(1, 1, 2, 5, 5),
+	selectTrials = c(0.5, 0.4, 0.3, 1/3),
+	trialReps = c(1, 2, 3, 3),
+	trialLocs = c(1, 2, 5, 5),
 	cyclePerYr = 3,
-	returnVDPtoRGSC = c(0, 0, 0, 0, 0, 0), # default to rep(0, nTrial)?
+	returnVDPtoRGSC = c(0, 0, 0, 0, 0), # default to rep(0, nTrial)?
 	nGenOut = NULL,
 	nGenInbr = NULL,
 # chromosome parameters

@@ -77,10 +77,10 @@ getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
 # 	if(var(pr) == 0 | var(tr) == 0) return(NA) else return(cor(tr, pr))
 # }
 
-getAcc <- function(popX, simParamX) {
-	popTrue <- gv(popX)
-	popPred <- ebv(popX)
-	if(var(c(popTrue)) == 0 | var(c(popPred)) == 0) NA else cor(popTrue, popPred)
+getAcc <- function(pop, simParam) {
+	popTrue <- gv(pop)
+	popPred <- ebv(pop)
+	if(nrow(popTrue) == 1 | var(c(popTrue)) == 0 | var(c(popPred)) == 0) NA else cor(popTrue, popPred)
 }
 
 dummyFunc <- function(x, retrn) { retrn }
@@ -333,7 +333,7 @@ maxVar <- function(pop, GSfit, nSel, nCrosses, use, weightLoci = FALSE, pullGeno
 
 
 solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
-	require(LowRankQP)
+	suppressMessages(require(LowRankQP))
 	inbreedingCoef <- function(cee, Kmat) 1/2 * crossprod(cee, Kmat) %*% cee
 	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
 	betterSample <- function(x, ...) x[sample(length(x), ...)]
@@ -528,7 +528,7 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 # lambdaOut = NULL; fthreshOut = list(0.2, NULL); gainOut = NULL; truncqpOut = list(NULL, 10); nGenOut <- 2
 # lambdaOut = NULL; fthreshOut = NULL; gainOut = NULL; truncqpOut = NULL; nGenOut <- 2
 # pop = RGSC[[pullRGSCgen]]; GSfit = GSmodel[c(pullGSmodel, lastGSmodel)]; nSel = nFam; nGenOut = nGenOut; nGenThisYr = cyclePerYr - pullCycle; trait = 1; use = useOut; quant = xInt; nProgeny = nProgenyPerCrossOut; Gvar = Gvar; fthreshOut = 0.1
-solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, limitN = FALSE, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL, truncqpOut = NULL, verbose = FALSE, simParam, ...){
+solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simParam, limitN = FALSE, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL, truncqpOut = NULL, verbose = FALSE, ...){
 	params <- list(lambdaOut = lambdaOut, fthreshOut = fthreshOut, gainOut = gainOut, truncqpOut = truncqpOut)
 	for(i in names(params)){
 		if (length(params[[i]]) > 1 & !is.list(params[[i]])) stop(paste0(i, " must be length 1 or a list."))
@@ -544,7 +544,7 @@ solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, limit
 			i <- i + 1
 			if(i > nGenThisYr) gs <- 2 # this updates the GS model for the next year, but cannot exceed 2 years!
 			if(verbose) msg(2, "solqpOut GS model:", names(GSfit)[gs])
-			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i],
+			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i], simParam = simParam,
 						   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
 			pop <- setEBV(pop, GSfit[[gs]])
 			if(verbose) msg(2, "solqpOut Pop Mean:", round(mean(pop@gv), 6))

@@ -4,11 +4,11 @@
 nFam=(4 10 20 40)
 famSize=(25 50 100 200)
 
-# 100, 
-selectTrials=("c(1, 0.5, 0.5, 0.4, 0.5)" \
-              "c(0.5, 0.5, 0.4, 0.3, 1/3)" \
-              "c(0.5, 0.25, 0.2, 0.4, 0.25)" \
-              "c(0.25, 0.25, 0.25, 0.2, 0.2)" )
+# Removed the low heritability trial
+selectTrials=("c(0.5, 0.5, 0.4, 0.5)" \
+              "c(0.5, 0.4, 0.3, 1/3)" \
+              "c(0.25, 0.2, 0.4, 0.25)" \
+              "c(0.25, 0.25, 0.2, 0.2)" )
 
 # h2=("c(0.1, 0.3, 0.3, 0.3, 0.3)" \
 #     "c(0.1, 0.3, 0.3, 0.3, 0.3)" \
@@ -31,8 +31,7 @@ selectTrials=("c(1, 0.5, 0.5, 0.4, 0.5)" \
 #                  "c(0, 0, 0, 0, 0, 0)")
 
 
-
-# use true values solqp
+# use solqp
 for i in {0..3}; do 
     for k in 0.01 0.005; do
         for j in 2 1 0; do
@@ -40,12 +39,12 @@ for i in {0..3}; do
           # k=0.01
           # j=2
             tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout0.2_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-            args=("nThreads=5" \
-                "nYr=30" \
+            args=("nThreads=25" \
+                "nYr=20" \
                 "simName=$tmpSimName" \
                 "projName=truncVSquadprog" \
-                "reps=2" \
-                "nFounderPops=2" \
+                "reps=10" \
+                "nFounderPops=5" \
                 "selectRGSC=0.2" \
                 "useTruth=${j}" \
                 "nFam=${nFam[$i]}" \
@@ -69,6 +68,42 @@ for i in {0..3}; do
          done
     done
 done
+
+
+for i in {0..3}; do 
+    for j in 2 1 0; do
+        tmpSimName="truncVSquadprog30yr1000QTL_trunc_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+        args=("nThreads=25" \
+            "nYr=20" \
+            "simName=$tmpSimName" \
+            "projName=truncVSquadprog" \
+            "reps=10" \
+            "nFounderPops=5" \
+            "selectRGSC=0.2" \
+            "useTruth=${j}" \
+            "nFam=${nFam[$i]}" \
+            "famSize=${famSize[$i]}"\
+            # "h2=${h2[$i]}" \
+            "pullCycle=1"
+            "selFuncOut=(NULL)" \
+            "selFuncIn=(NULL)" \
+            "inbreedFunc=(NULL)" \
+            "withinFamInt=1" \
+            "selectTrials=${selectTrials[$i]}")
+            # "trialReps=${trialReps[$i]}" \
+            # "trialLocs=${trialLocs[$i]}" \
+            # "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
+        # echo ${args[@]}
+        # printf '%s\n' "${args[@]}"
+        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+        # Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}"
+     done
+done
+
+
+
+
+
 
 
 # # use true values solqp
