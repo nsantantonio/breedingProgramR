@@ -27,7 +27,7 @@ defArgs <- list(
 	founderKeep = 5,
 # selection parameters
 	selectRGSC = 0.2,
-	pullCycle = 1, 
+	pullCycle = NULL, 
 	nProgenyPerCrossIn = 1,
 	nProgenyPerCrossOut = 1,
 	useIn = "ebv", # ebv, rand
@@ -133,124 +133,6 @@ SP$addSnpChip(defArgs$nM)
 loci <- pullLoci(SP)
 # Reduce(intersect, loci)
 
-testRun <- FALSE
-if(testRun){
-	# defArgs[["weight"]] <- 0.2
-	# altArgs <- c(altArgs, "maxCrossPerParent", "weight")
-	# defArgs[["GSfunc"]] <- RRBLUP2
-	# defArgs[["maxIter"]] <- 500L
-	defArgs0 <- defArgs
-	run0 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs0, returnFunc = getPopStats), defArgs0[altArgs]))
-	run0$gvRGSC
-	# run0$gvVDP
-	run0$varMean
-	run0$VgRGSC
-
-	defArgs0.1 <- defArgs
-	defArgs0.1[["selFuncIn"]] <- truncSel 
-	altArgs <- c("selFuncIn")
-
-	run0.1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs0, returnFunc = getPopStats), defArgs0.1[altArgs]))
-	cor(run0$gvRGSC, run0.1$gvRGSC)
-	# run0$gvVDP
-	run0$varMean
-	run0$VgRGSC
-
-	# defArgs[["selFuncOut"]] <- solqpOut 
-	defArgs[["selFuncIn"]] <- solqp 
-	defArgs[["fthresh"]] <- 0.01
-	# defArgs[["fthreshOut"]] <- 0.2
-	altArgs <- c(altArgs, "selFuncIn","fthresh")
-	# altArgs <- altArgs[[1]]
-
-	run1 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-	run1$gvRGSC
-	run1$varMean
-	run1$VgRGSC
-
-
-	altArgs <- NULL
-	defArgs[["selFuncOut"]] <- solqpOut 
-	defArgs[["selFuncIn"]] <- solqp 
-	defArgs[["pullCycle"]] <- 1
-	defArgs[["fthresh"]] <- 0.01
-	defArgs[["fthreshOut"]] <- 0.2
-	altArgs <- c(altArgs, "selFuncOut","selFuncIn","pullCycle","fthresh","fthreshOut")
-	# altArgs <- altArgs[[1]]
-
-	run2 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-	run2$gvRGSC
-	run2$varMean
-	run2$VgRGSC
-
-	pdf("checkQPvsTrunc005In02Out.pdf")
-	plot(1:defArgs$nYr, run0$varMean, type = "l", ylim = c(4, 35), main = "Variety Means")
- 	lines(1:defArgs$nYr, run1$varMean, lty = 2)
-	legend("topleft", lty = c(1, 2), legend = c("truncation", "quadProg"))
-	
-	plot(seq(0, defArgs$nYr, 1/3), run0$gvRGSC, type = "l", ylim = c(0, 35), main = "Recurrent Population Mean")
- 	lines(seq(0, defArgs$nYr, 1/3), run1$gvRGSC, lty = 2)
-	legend("topleft", lty = c(1, 2), legend = c("truncation", "quadProg"))
-	
-	plot(seq(0, defArgs$nYr, 1/3), run0$sdRGSC, type = "l", ylim = c(0, 1.2), main = "Recurrent Population Variance")
- 	lines(seq(0, defArgs$nYr, 1/3), run1$sdRGSC, lty = 2)
-	legend("topleft", lty = c(1, 2), legend = c("truncation", "quadProg"))
-	
-	dev.off()
-
-
-	simL <- list()
-	for(i in c(0.005, 0.01, 0.05, 0.1, 0.5)) {
-	}
-	gvRGSC <- lapply(simL, "[[", "gvRGSC")
-	varMean <- lapply(simL, "[[", "varMean")
-	Vg <- lapply(simL, "[[", "VgRGSC")
-	sdRGSC <- lapply(simL, "[[", "sdRGSC")
-
-	names(simL[[1]])
-
-
-	defArgs[["fthresh"]] <- 0.1
-	altArgs <- c(altArgs, "fthresh")
-	altArgs <- altArgs[[1]]
-
-
-	run2 <- do.call(sim, c(list(founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-	run2$gvRGSC
-	# run2$gvVDP
-	run2$varMean
-
-	pdf("qpSolByF_Variety.pdf")
-	plot(1:defArgs$nYr, run0$varMean, type = "l", ylim = c(4, 30), main = "Variety Means")
-	for(i in 1:length(varMean)) lines(1:defArgs$nYr, varMean[[i]], lty = i + 1)
-	legend("topleft", lty = c(1, 1:length(varMean) + 1), legend = c("truncation", names(varMean)))
-	dev.off()
-
-
-	pdf("qpSolByF_RGSC.pdf")
-	plot(seq(0, defArgs$nYr, 0.5), run0$gvRGSC, type = "l", ylim = c(0, 30), main = "Recurrent Population Mean")
-	for(i in 1:length(varMean)) lines(seq(0, defArgs$nYr, 0.5), gvRGSC[[i]], lty = i + 1)
-	legend("topleft", lty = c(1, 1:length(varMean) + 1), legend = c("truncation", names(varMean)))
-	dev.off()
-
-	pdf("qpSolByF_RGSC_Var.pdf")
-	plot(seq(0, defArgs$nYr, 0.5), run0$VgRGSC, type = "l", ylim = c(0, 1.2), main = "Recurrent Population Variance")
-	for(i in 1:length(varMean)) lines(seq(0, defArgs$nYr, 0.5), Vg[[i]], lty = i + 1)
-	legend("topright", lty = c(1, 1:length(varMean) + 1), legend = c("truncation", names(varMean)))
-	dev.off()
-
-	pdf("qpSolByF_RGSC_Sd.pdf")
-	plot(seq(0, defArgs$nYr, 0.5), run0$sdRGSC, type = "l", ylim = c(0, 1.2), main = "Recurrent Population Variance")
-	for(i in 1:length(varMean)) lines(seq(0, defArgs$nYr, 0.5), sdRGSC[[i]], lty = i + 1)
-	legend("topright", lty = c(1, 1:length(varMean) + 1), legend = c("truncation", names(varMean)))
-	dev.off()
-
-
-	reps <- 2
-	setMKLthreads(10)
-	registerDoMC(2)
-	simrun <- foreach(r = 1:reps) %dopar% do.call(sim, c(list(r = r, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-}
 
 if(system("hostname", intern = TRUE) == "Bender") {
 	setMKLthreads(1)
@@ -259,16 +141,6 @@ if(system("hostname", intern = TRUE) == "Bender") {
 	registerDoMC(defArgs$nThreads)
 }
 
-
-# defArgs[["selFuncOut"]] <- solqpOut 
-# defArgs[["selFuncIn"]] <- solqp 
-# defArgs[["pullCycle"]] <- 1
-# defArgs[["fthresh"]] <- 0.01
-# defArgs[["fthreshOut"]] <- 0.2
-# altArgs <- c(altArgs, "selFuncOut","selFuncIn","pullCycle","fthresh","fthreshOut")
-
-# simrun <- foreach(r = 1:reps) %dopar% sim(founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats)
-# simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps) %do% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps, .errorhandling='pass') %dopar% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
 msg(0, "saving results in", paste0(simDir, "/", defArgs$simName, ".RData"))
 save(simrun, SP, file = paste0(simDir, "/", defArgs$simName, ".RData"))

@@ -188,6 +188,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	for (i in 1:(nYr + nTrial - 1)) { 
 	# for (i in 1:10) { 
 		# i = 1
+		# i = 2
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
 		selectRGSCi <- if(deltaRGSC) selectRGSC[i] else selectRGSC[1]
@@ -310,12 +311,13 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				}
 				# would be good to be able to select within f2 family if f2 > 1
 				if (selF2) RGSC[[gen(j)]] <- self(RGSC[[gen(j)]], nProgeny = nF2, simParam = simParam)
-				if(jp == pullCycle) {
-					pullRGSCgen <- gen(j)
-				}
+				# if(jp == pullCycle) {
+				# 	pullRGSCgen <- gen(j) # should I push material out earlier?
+				# }
 				if(verbose) msg(1, "RGSC Vg:", round(varA(RGSC[[gen(j)]]), 6))
 				if(verbose) msg(1, "RGSC Pop Mean:", round(mean(RGSC[[gen(j)]]@gv), 6))
 			}
+			pullRGSCgen <- if(pullCycle > 0) gen(cycle[[pullCycle]]) else lastRGSCgen
 			# update GScycle number
 			cycle <- cycle + cyclePerYr
 			

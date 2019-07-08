@@ -1,8 +1,15 @@
 #!/bin/bash
 
+projName=${projectName}
+
 # rgscint=(0.05 0.1 0.2 0.3 0.4 0.5)
 nFam=(4 10 20 40)
 famSize=(25 50 100 200)
+
+reps=10
+nFounderPops=5
+nThreads=25
+nYr=20
 
 # Removed the low heritability trial
 selectTrials=("c(0.5, 0.5, 0.4, 0.5)" \
@@ -31,133 +38,185 @@ selectTrials=("c(0.5, 0.5, 0.4, 0.5)" \
 #                  "c(0, 0, 0, 0, 0, 0)")
 
 
-# use solqp
-for i in {0..3}; do 
-    for k in 0.01 0.005; do
-        for j in 2 1 0; do
-          # i=0
-          # k=0.01
-          # j=2
-            tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout0.2_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-            args=("nThreads=25" \
-                "nYr=20" \
-                "simName=$tmpSimName" \
-                "projName=truncVSquadprog" \
-                "reps=10" \
-                "nFounderPops=5" \
-                "selectRGSC=0.2" \
-                "useTruth=${j}" \
-                "nFam=${nFam[$i]}" \
-                "famSize=${famSize[$i]}"\
-                # "h2=${h2[$i]}" \
-                "pullCycle=1"
-                "selFuncOut=(solqpOut)" \
-                "selFuncIn=(solqp)" \
-                "inbreedFunc=(withinFamSel)" \
-                "withinFamInt=1" \
-                "fthresh=${k}" \
-                "fthreshOut=0.2" \
-                "selectTrials=${selectTrials[$i]}")
-                # "trialReps=${trialReps[$i]}" \
-                # "trialLocs=${trialLocs[$i]}" \
-                # "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-            # echo ${args[@]}
-            # printf '%s\n' "${args[@]}"
-            Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
-            # Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}"
-         done
+# use solqp, full factorial... DONT RUN!
+# for i in {0..3}; do 
+#     for k in 0.05 0.01 0.005; do
+#         for j in 2 1 0; do
+#             for l in 0.1 0.2 0.3; do
+#                 for n in 0 1 2; do
+#                     for p in {0..3}; do
+#                         tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout${l}_N${n}_pull${p}_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+#                         args=("nThreads=${nThreads}" \
+#                             "nYr=${nYr}" \
+#                             "simName=$tmpSimName" \
+#                             "projName=${projectName}" \
+#                             "reps=${reps}" \
+#                             "nFounderPops=${nFounderPops}" \
+#                             "selectRGSC=0.2" \
+#                             "useTruth=${j}" \
+#                             "nFam=${nFam[$i]}" \
+#                             "famSize=${famSize[$i]}"\
+#                             "limitN=${n}" \
+#                             "pullCycle=${p}" \
+#                             "selFuncOut=(solqpOut)" \
+#                             "selFuncIn=(solqp)" \
+#                             "withinFamInt=1" \
+#                             "fthresh=${k}" \
+#                             "fthreshOut=${l}" \
+#                             "selectTrials=${selectTrials[$i]}")
+#                         Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+#                     done
+#                 done
+#             done
+#         done
+#     done
+# done
+
+
+
+# use solqp, test, 
+for i in 1; do 
+    for k in 0.01; do
+        for j in 0; do
+            for l in 0.2; do
+                for n in 1; do
+                    for p in 0; do
+                        tmpSimName="TESTtruncVSquadprog30yr1000QTL_quadprog_fin${k}_fout${l}_N${n}_pull${p}_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+                        args=("nThreads=${nThreads}" \
+                            "nYr=${nYr}" \
+                            "simName=$tmpSimName" \
+                            "projName=TEST" \
+                            "reps=2" \
+                            "nFounderPops=2" \
+                            "selectRGSC=0.2" \
+                            "useTruth=${j}" \
+                            "nFam=${nFam[$i]}" \
+                            "famSize=${famSize[$i]}"\
+                            "limitN=${n}" \
+                            "pullCycle=${p}" \
+                            "selFuncOut=(solqpOut)" \
+                            "selFuncIn=(solqp)" \
+                            "fthresh=${k}" \
+                            "fthreshOut=${l}" \
+                            "selectTrials=${selectTrials[$i]}")
+                        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+                    done
+                done
+            done
+        done
     done
 done
 
 
-for i in {0..3}; do 
-    for j in 2 1 0; do
-        tmpSimName="truncVSquadprog30yr1000QTL_trunc_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-        args=("nThreads=25" \
-            "nYr=20" \
-            "simName=$tmpSimName" \
-            "projName=truncVSquadprog" \
-            "reps=10" \
-            "nFounderPops=5" \
-            "selectRGSC=0.2" \
-            "useTruth=${j}" \
-            "nFam=${nFam[$i]}" \
-            "famSize=${famSize[$i]}"\
-            # "h2=${h2[$i]}" \
-            "pullCycle=1"
-            "selFuncOut=(NULL)" \
-            "selFuncIn=(NULL)" \
-            "inbreedFunc=(NULL)" \
-            "withinFamInt=1" \
-            "selectTrials=${selectTrials[$i]}")
-            # "trialReps=${trialReps[$i]}" \
-            # "trialLocs=${trialLocs[$i]}" \
-            # "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-        # echo ${args[@]}
-        # printf '%s\n' "${args[@]}"
-        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
-        # Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}"
-     done
+# use solqp, vary fthreshout, 
+for i in 1; do 
+    for k in 0.01; do
+        for j in 2 1 0; do
+            for l in 0.1 0.2 0.3; do
+                for n in 1; do
+                    for p in 0; do
+                        tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout${l}_N${n}_pull${p}_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+                        args=("nThreads=${nThreads}" \
+                            "nYr=${nYr}" \
+                            "simName=$tmpSimName" \
+                            "projName=${projectName}" \
+                            "reps=${reps}" \
+                            "nFounderPops=${nFounderPops}" \
+                            "selectRGSC=0.2" \
+                            "useTruth=${j}" \
+                            "nFam=${nFam[$i]}" \
+                            "famSize=${famSize[$i]}"\
+                            "limitN=${n}" \
+                            "pullCycle=${p}" \
+                            "selFuncOut=(solqpOut)" \
+                            "selFuncIn=(solqp)" \
+                            "fthresh=${k}" \
+                            "fthreshOut=${l}" \
+                            "selectTrials=${selectTrials[$i]}")
+                        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+                    done
+                done
+            done
+        done
+    done
+done
+
+# use solqp, vary limitN
+for i in 1; do 
+    for k in 0.01; do
+        for j in 2 1 0; do
+            for l in 0.1; do
+                for n in 0 1 2; do
+                    for p in 0; do
+                        tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout${l}_N${n}_pull${p}_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+                        args=("nThreads=${nThreads}" \
+                            "nYr=${nYr}" \
+                            "simName=$tmpSimName" \
+                            "projName=${projectName}" \
+                            "reps=${reps}" \
+                            "nFounderPops=${nFounderPops}" \
+                            "selectRGSC=0.2" \
+                            "useTruth=${j}" \
+                            "nFam=${nFam[$i]}" \
+                            "famSize=${famSize[$i]}"\
+                            "limitN=${n}" \
+                            "pullCycle=${p}" \
+                            "selFuncOut=(solqpOut)" \
+                            "selFuncIn=(solqp)" \
+                            "fthresh=${k}" \
+                            "fthreshOut=${l}" \
+                            "selectTrials=${selectTrials[$i]}")
+                        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+                    done
+                done
+            done
+        done
+    done
 done
 
 
+# use solqp, dont branch....
+for i in 1; do 
+    for k in 0.01; do
+        for j in 2 1 0; do
+            tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_pull${p}_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+                args=("nThreads=${nThreads}" \
+                    "nYr=${nYr}" \
+                    "simName=$tmpSimName" \
+                    "projName=${projectName}" \
+                    "reps=${reps}" \
+                    "nFounderPops=${nFounderPops}" \
+                    "selectRGSC=0.2" \
+                    "useTruth=${j}" \
+                    "nFam=${nFam[$i]}" \
+                    "famSize=${famSize[$i]}"\
+                    "selFuncOut=(solqpOut)" \
+                    "fthresh=${k}" \
+                    "selectTrials=${selectTrials[$i]}")
+                Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+            done
+        done
+    done
+done
 
 
+# truncation selection
 
+for i in {0..3}; do 
+    for j in 2 1 0; do
+        tmpSimName="truncVSquadprog30yr1000QTL_trunc_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+        args=("nThreads=${nThreads}" \
+            "nYr=${nYr}" \
+            "simName=$tmpSimName" \
+            "projName=${projectName}" \
+            "reps=${reps}" \
+            "nFounderPops=${nFounderPops}" \
+            "useTruth=${j}" \
+            "nFam=${nFam[$i]}" \
+            "famSize=${famSize[$i]}"\
+            "selectTrials=${selectTrials[$i]}")
+        Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+     done
+done
 
-
-# # use true values solqp
-# for i in {0..3}; do 
-#     for k in 0.01 0.005; do
-#         for j in 2 1 0; do
-#             tmpSimName="truncVSquadprog30yr1000QTL_quadprog_fin${k}_fout0.2_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-#             args=("nThreads=30" \
-#                 "nYr=30" \
-#                 "simName=$tmpSimName" \
-#                 "projName=truncVSquadprog" \
-#                 "selectRGSC=0.2" \
-#                 "useTruth=$j" \
-#                 "nFam=${nFam[$i]}" \
-#                 "famSize=${famSize[$i]}"\
-#                 "h2=${h2[$i]}" \
-#                 "pullCycle=1"
-#                 "selFuncOut=solqpOut" \
-#                 "selFuncIn=solqp" \
-#                 "inbreedFunc=withinFamSel" \
-#                 "withinFamInt=1" \
-#                 "fthresh=$k" \
-#                 "fthreshOut=0.2" \
-#                 "selectTrials=${selectTrials[$i]}" \
-#                 "trialReps=${trialReps[$i]}" \
-#                 "trialLocs=${trialLocs[$i]}" \
-#                 "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-#             Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
-#          done
-#     done
-# done
-
-# # use true values truncation
-# for i in {0..3}; do 
-#     for j in 2 1 0; do
-#         tmpSimName="truncVSquadprog30yr1000QTL_trunc_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
-#         args=("nThreads=30" \
-#             "nYr=30" \
-#             "simName=$tmpSimName" \
-#             "projName=truncVSquadprog" \
-#             "selectRGSC=0.2" \
-#             "useTruth=$j" \
-#             "nFam=${nFam[$i]}" \
-#             "famSize=${famSize[$i]}"\
-#             "h2=${h2[$i]}" \
-#             "selFuncOut=NULL" \
-#             "selFuncIn=NULL" \
-#             "inbreedFunc=withinFamSel" \
-#             "withinFamInt=1" \
-#             "selectTrials=${selectTrials[$i]}" \
-#             "trialReps=${trialReps[$i]}" \
-#             "trialLocs=${trialLocs[$i]}" \
-#             "returnVDPtoRGSC=${returnVDPtoRGSC[$i]}")
-#         Rscript $(pwd)/singleTraitProgram.R --args "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
-#     done
-# done
 

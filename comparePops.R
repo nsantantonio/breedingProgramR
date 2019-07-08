@@ -2,7 +2,7 @@ parDir <- getwd()
 source(paste0(parDir, "/alphaTools.R"))
 
 argList <- as.list(commandArgs(TRUE))
-# argList <- c("truncSel_truncCross" "truncSel_expDistPairs" "truncSel_simDHdistPairs")
+# argList <- c("testACquant", "testDefault")
 
 cols <- c("#006600", "#00008C", "#660000", "#8C8C00", "#660066", "#006666")
 cols <- if(length(argList) == 1) "#000000" else if(length(argList) <= 6) cols[1:length(argList)] else stop("I can only do up to 4 sims!")

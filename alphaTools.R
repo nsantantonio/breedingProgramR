@@ -525,10 +525,10 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 # }
 
 
-# lambdaOut = NULL; fthreshOut = list(0.2, NULL); gainOut = NULL; truncqpOut = list(NULL, 10); nGenOut <- 2
-# lambdaOut = NULL; fthreshOut = NULL; gainOut = NULL; truncqpOut = NULL; nGenOut <- 2
+# lambdaOut = NULL; fthreshOut = list(0.2, NULL); gainOut = NULL; truncqpOut = list(NULL, 10); nGenOut <- cyclePerYr - pullCycle 
+# lambdaOut = NULL; fthreshOut = NULL; gainOut = NULL; truncqpOut = NULL; nGenOut <- cyclePerYr - pullCycle; limitN = 0
 # pop = RGSC[[pullRGSCgen]]; GSfit = GSmodel[c(pullGSmodel, lastGSmodel)]; nSel = nFam; nGenOut = nGenOut; nGenThisYr = cyclePerYr - pullCycle; trait = 1; use = useOut; quant = xInt; nProgeny = nProgenyPerCrossOut; Gvar = Gvar; fthreshOut = 0.1
-solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simParam, limitN = FALSE, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL, truncqpOut = NULL, verbose = FALSE, ...){
+solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simParam, limitN = 0, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL, truncqpOut = NULL, verbose = FALSE, ...){
 	params <- list(lambdaOut = lambdaOut, fthreshOut = fthreshOut, gainOut = gainOut, truncqpOut = truncqpOut)
 	for(i in names(params)){
 		if (length(params[[i]]) > 1 & !is.list(params[[i]])) stop(paste0(i, " must be length 1 or a list."))
@@ -537,20 +537,28 @@ solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simPa
 	if(nGenOut == 0){
 		pop <- selectInd(pop, nInd = nSel, use = use)
 	} else {
-		N <- if(limitN) rep(nSel, nGenOut) else c(rep(nInd(pop), nGenOut - 1), nSel)
+		# N <- if(limitN) rep(nSel, nGenOut) else c(rep(nInd(pop), nGenOut - 1), nSel) # this doesnt allow for crossing and selection at the last cycle 
+		N <- if(limitN > 1) rep(nSel, nGenOut) else if(limitN > 0) c(rep(nInd(pop), nGenOut - 1), nSel) else rep(nInd(pop), nGenOut)
 		gs <- 1
 		i <- 0
+		if(verbose) msg(2, "solqpOut Initial Pop Mean:", round(mean(pop@gv), 6), "PopVar", round(varA(pop), 6))
+
 		while(i < nGenOut){
 			i <- i + 1
 			if(i > nGenThisYr) gs <- 2 # this updates the GS model for the next year, but cannot exceed 2 years!
 			if(verbose) msg(2, "solqpOut GS model:", names(GSfit)[gs])
 			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i], simParam = simParam,
-						   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
+						   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]]))#, ...))
+						   # nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
 			pop <- setEBV(pop, GSfit[[gs]])
-			if(verbose) msg(2, "solqpOut Pop Mean:", round(mean(pop@gv), 6))
+			if(verbose) msg(2, "solqpOut Pop Mean:", round(mean(pop@gv), 6), "PopVar", round(varA(pop), 6))
 			if(verbose) msg(2, "solqpOut pop size:", nInd(pop))
 		}
 	}
+	# note, this is behind by one round of selection! no crossing happening at last round.  
+	if(limitN < 1) pop <- selectInd(pop, nInd = nSel, use = use)
+	if(verbose) msg(2, "solqpOut Final Pop Mean:", round(mean(pop@gv), 6), "PopVar", round(varA(pop), 6))
+	# Need to push contribtions out so that evaluate proportional numbers of each pop. Or use inbreeding coefficeint of selected lines? 1/F / (sum(1/F))?
 	pop
 }
 
@@ -939,8 +947,12 @@ getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
 	Yvariety <- unlist(gvVariety)
 	Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety)
 
+
     RGSCacc <- resultL$predAcc[["RGSC"]]
-    # add VDP pred acc here! for skipping gens
+    VDPacc <- resultL$predAcc[["VDP"]]
+    RGSCoutAcc <- resultL$predAcc[["RGSCout"]]
+    VDPinAcc <- resultL$predAcc[["VDPin"]]
+
     # if(any(names(resultL$predAcc)) VDPacc <- 
     theorMax <- maxBv(resultL$SP)
 	
@@ -949,7 +961,8 @@ getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
     return(list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, varMean = varMean, sdRGSC = SDgRGSC, 
 				VgRGSC = VgRGSC, VgVDP = VgVDP, gvRGSC = gvRGSC, gvVDP = gvVDP,
     			sRGSC = sRGSC, iRGSC = iRGSC, sVDP = sVDP, iVDP = iVDP, sTotal = sTotal, iTotal = iTotal, 
-    			nVar = nVar, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, RGSCacc = RGSCacc, theorMax = theorMax))
+    			nVar = nVar, vx = Xvariety, vy = Yvariety, RGSCyr = Ryr, RGSCacc = RGSCacc, VDPacc = VDPacc,
+    			RGSCoutAcc = RGSCoutAcc, VDPinAcc = VDPinAcc, theorMax = theorMax))
 }
 
 
