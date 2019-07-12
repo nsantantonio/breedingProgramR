@@ -170,8 +170,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 
 	# train GS model and set EBV (after selfing if ssd)
 	if (selF2) RGSC[[gen(0)]] <- self(RGSC[[gen(0)]], nProgeny = nF2, simParam = simParam)
-	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue)
-	# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQTL = useTrue, maxIter = 1000L, ...))
+	GSmodel[[gen(0)]] <- RRBLUP(RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue)
+	# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RGSC[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue, maxIter = 1000L, ...))
 	RGSC[[gen(0)]] <- setEBV(RGSC[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 	predAcc[["RGSC"]][[gen(0)]] <- getAcc(pop = RGSC[[gen(0)]], simParam = simParam)
 	
@@ -336,17 +336,17 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			# concatenate training set and train GS model
 	 		train <- mergePopsRec(trnSet) 
 			msg(1, "Training set has", train@nInd, "individuals...")	
-			# GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue)
+			# GSmodel[[gen(i)]] <- GSfunc(train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue)
 			if(genParam(train)$varG == 0) {
 				GSmodel[[gen(i)]] <- GSmodel[[gen(i - 1)]]
 			} else {
 				if(!is.null(GSfunc)){
-					GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
+					GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
 				} else {
 					if(nInd(train) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
-						GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
+						GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
 					} else {
-						GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQTL = useTrue, maxIter = maxIter))#, ...))
+						GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
 					}
 				}
 			}
