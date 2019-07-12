@@ -13,7 +13,7 @@ defArgs <- list(
 	simFunc = "fitFuncSingleVariate.R", 
 	maxIter = 1000L,
 	reps = 10,
-	nFounderPops = 5,
+	nFounderPops = 10,
 	lgen = 5,
 	useTruth = 0, # make this an integer, 1 = use QTL, 2 = use true effects?
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
