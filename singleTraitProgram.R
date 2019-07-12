@@ -62,6 +62,7 @@ defArgs <- list(
 	returnVDPtoRGSC = c(0, 0, 0, 0, 0), # default to rep(0, nTrial)?
 	nGenOut = NULL,
 	nGenInbr = NULL,
+	phenoRGSC = 0,
 # chromosome parameters
 	nChrom = 10,
 	nLoci = 100,

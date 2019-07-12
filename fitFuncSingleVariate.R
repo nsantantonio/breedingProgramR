@@ -328,6 +328,11 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			# hope I dont break the recursive merge with this...
 			if(founderKeep >= i) trnSet["founder"] <- RGSC[gen(0)]
 
+			# CHECK BRACKETS!!!!!!!!!!!!!!!!!
+			if(phenoRGSC > 0) {
+				trnSet["RGSC"] <- RGSC[lastRGSCgen]
+			}
+			
 			# concatenate training set and train GS model
 	 		train <- mergePopsRec(trnSet) 
 			msg(1, "Training set has", train@nInd, "individuals...")	
