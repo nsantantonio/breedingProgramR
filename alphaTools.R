@@ -70,7 +70,43 @@ maxBv <- function(simParam, traits = 1) { sapply(simParam$traits[traits], functi
 sdUnCor <- function(x) { sqrt(mean(x^2) - mean(x)^2) }
 getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
 
+# getInbreedCoef <- function(pop){
+# 	pop <- selToP
+# 	for(i in 1:6) pop <- self(pop, nProgeny = 1)
+# 	Q <- pullQtlGeno(self(pop[1], nProgeny = 10))
+# 	sum(Q == 1) / prod(dim(Q))
+# 	apply(Q, 1, function(x) sum(x == 1) / length(x))
+# 	K <- genCov(Q)
+# 	mean(diag(K))
+# 	cee <- rep(1/nrow(Q), nrow(Q))
+# 	crossprod(cee, K) %*% cee 
 
+
+
+# 	Q <- pullQtlGeno(pop)
+# 	Q <- pullQtlGeno(makeDH(pop[1:2], nDH = 10))
+# 	Q <- pullQtlGeno(self(pop[1], nProgeny = 10))
+	
+# 	cee <- rep(1/nrow(Q), nrow(Q))
+# 	Z <- scale(Q, scale = FALSE)
+# 	p <- attributes(Z)[["scaled:center"]] / 2
+# 	alVar <- 2 * crossprod(p, 1-p)[[1]]
+# 	ZZt <- tcrossprod(Z) / alVar
+
+
+
+# 	ZZtp <- tcrossprod(Q - 1) / alVar
+# 	crossprod(cee, genCov(Q)) %*% cee 
+
+
+# 	mean(diag(ZZt))
+
+# }
+
+	
+
+
+# }
 # GPacc <- function(pop){
 # 	tr <- pop@gv
 # 	pr <- pop@ebv
@@ -534,6 +570,7 @@ solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simPa
 		if (length(params[[i]]) > 1 & !is.list(params[[i]])) stop(paste0(i, " must be length 1 or a list."))
 		if(length(params[[i]]) <= 1) params[[i]] <- rep(list(params[[i]]), nGenOut) else if(length(params[[i]]) != nGenOut) stop(paste0(i, " is the wrong length, must be 1 or cyclePerYr - pullCycle"))
 	}
+	pop <- setEBV(pop, GSfit)
 	if(nGenOut == 0){
 		pop <- selectInd(pop, nInd = nSel, use = use)
 	} else {
@@ -545,12 +582,16 @@ solqpOut <- function(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simPa
 
 		while(i < nGenOut){
 			i <- i + 1
-			if(i > nGenThisYr) gs <- 2 # this updates the GS model for the next year, but cannot exceed 2 years!
-			if(verbose) msg(2, "solqpOut GS model:", names(GSfit)[gs])
-			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i], simParam = simParam,
+			# if(i > nGenThisYr) gs <- 2 # this updates the GS model for the next year, but cannot exceed 2 years!
+			# if(verbose) msg(2, "solqpOut GS model:", names(GSfit))
+			# pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit[[gs]], use = use, nCrosses = N[i], simParam = simParam,
+			# 			   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]]))#, ...))
+			# 			   # nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
+			# pop <- setEBV(pop, GSfit[[gs]])
+			pop <- do.call(solqp, getArgs(solqp, pop = pop, GSfit = GSfit, use = use, nCrosses = N[i], simParam = simParam,
 						   nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]]))#, ...))
 						   # nProgeny = nProgeny, lambda = params$lambdaOut[[i]], fthresh = params$fthreshOut[[i]], gain = params$gainOut[[i]], truncqp = params$truncqpOut[[i]], ...))
-			pop <- setEBV(pop, GSfit[[gs]])
+			pop <- setEBV(pop, GSfit)
 			if(verbose) msg(2, "solqpOut Pop Mean:", round(mean(pop@gv), 6), "PopVar", round(varA(pop), 6))
 			if(verbose) msg(2, "solqpOut pop size:", nInd(pop))
 		}
@@ -874,11 +915,11 @@ wrightsF <- function(M, returnNA = TRUE){
 
 # set.seed(123)
 
-genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm = TRUE){
+genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm = TRUE, p = NULL){
 	if(is.matrix(u)) u <- c(u)
 	Z <- scale(M, scale = FALSE)
 	m <- if(inclm) ncol(Z) else 1
-	p <- attributes(Z)[["scaled:center"]] / 2
+	if(is.null(p)) p <- attributes(Z)[["scaled:center"]] / 2
 	v <- 2 * p * (1 - p)
 	if(is.null(u) & sumVar){
 		ZDZt <- tcrossprod(Z) / sum(v)
@@ -886,6 +927,30 @@ genCov <- function(M, u = NULL, absU = TRUE, sumVar = TRUE, scaleD = TRUE, inclm
 		if(all(u == 1) & length(u) == 1) u <- rep(1, ncol(Z))
 		d <- u
 		if(absU) d <- abs(d)
+		if(!sumVar) {
+			seg <- v != 0
+			d <- d[seg] / (v*m)[seg]
+			Z <- Z[, seg]
+		}
+		if(scaleD) d <- d / mean(d)
+		ZDZt <- tcrossprod(Z %*% diag(d), Z)
+		if(sumVar) ZDZt <- ZDZt / sum(v)
+	}
+	ZDZt
+}
+
+genCov2 <- function(M, u = NULL, absD = TRUE, sumVar = TRUE, scaleD = TRUE, inclm = TRUE, p = NULL){
+	if(is.matrix(u)) u <- c(u)
+	Z <- scale(M, scale = FALSE)
+	m <- if(inclm) ncol(Z) else 1
+	if(is.null(p)) p <- attributes(Z)[["scaled:center"]] / 2
+	v <- 2 * p * (1 - p)
+	if(is.null(u) & sumVar){
+		ZDZt <- tcrossprod(Z) / sum(v)
+	} else {
+		if(all(u == 1) & length(u) == 1) u <- rep(1, ncol(Z))
+		d <- if (!is.null(p)) 1 / v else u
+		if(absD) d <- abs(d)
 		if(!sumVar) {
 			seg <- v != 0
 			d <- d[seg] / (v*m)[seg]

@@ -28,26 +28,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	for (p in names(paramL)) assign(p, paramL[[p]])
 	
 	selFuncStop <- c(" is a list, but of the wrong structure. Please provide either a single function, a list of functions for for each year, each cycle, or a nested list of length 'nYr' with each element of length 'cyclePerYr'")
-	
-	# funcs <- list(selFuncIn = selFuncIn, selFuncOut = selFuncOut, inbreedFunc = inbreedFunc)
-	# for(f in names(funcs)){
-	# 	if(is.list(funcs[[f]])) {
-	# 		if (length(funcs[[f]]) %in% c(cyclePerYr, nYr, cyclePerYr * nYr)) {
-	# 			if(all(sapply(funcs[[f]], class) == "list")){
-	# 				if (!all(unique(sapply(funcs[[f]], length)) == cyclePerYr)) stop(paste0(f, funcListStop))
-	# 			}
-	# 			if(length(funcs[[f]]) == cyclePerYr & f == "selFuncIn") funcs[[f]] <- rep(list(funcs[[f]]), nYr)
-	# 			if(length(funcs[[f]]) == nYr & f == "selFuncIn") funcs[[f]] <- lapply(1:nYr, function(x) rep(list(funcs[[f]][[x]]), cyclePerYr))
-	# 		} else {
-	# 			stop(paste0(f, funcListStop))
-	# 		}
-	# 	} else {
-	# 		if(!is.null(funcs[[f]])) {
-	# 			if(class(funcs[[f]]) == "function") funcs[[f]] <- rep(list(rep(list(funcs[[f]]), cyclePerYr)), nYr) else stop(paste0(f, funcListStop))
-	# 		}
-	# 	}
-	# }
-	# for (f in names(funcs)) assign(f, funcs[[f]])
+	if(phenoRGSC < 0 | phenoRGSC > 1) stop("'phenoRGSC' must be between 0 and 1 representing the proportion of the first VDP trial dedicated to phenotyping the RGSC!")
 
 	if(is.null(pullCycle)) pullCycle <- cyclePerYr
 
@@ -70,8 +51,6 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	if(is.function(selFuncOut)) selFuncOut <- rep(list(selFuncOut), nYr) else if(is.list(selFuncOut)) {if (length(selFuncOut) != nYr) stop(paste0("selFuncOut", funcListStop))}
 	if(is.function(inbreedFunc)) inbreedFunc <- rep(list(inbreedFunc), nYr) else if(is.list(inbreedFunc)) {if (length(inbreedFunc) != nYr) stop(paste0("inbreedFunc", funcListStop))}
 
-	# if(any(sapply(unlist(selFuncIn), function(x) identical(x, solqp)))) require(LowRankQP)
-
 	if(!(length(selectRGSC) == 1 | length(selectRGSC) == nYr)) stop("'selectRGSC' must be of length 1 or nYr!")
 	if(all(selectRGSC <= 1)) {
 		selectRGSC <- nNuclear * selectRGSC
@@ -84,8 +63,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 		founderPop <- founderPop[subFounder]
 	}
 
+
 	if (selF2 & cyclePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'cyclePerYr' to 1")
-	# if (selF2 & is.null(selFunc)) warning("Selection on F2 is being performed, but not on expected quantiles, you probably want to set selQuantile = TRUE")
 
 	# check selectTrials & nReturnVDPtoRGSC
 	if (!all(selectTrials > 0) | (any(selectTrials < 1) & any(selectTrials > 1))) stop("'selectTrials' must have elements between 0 and 1 or positive integers > 0")
@@ -145,6 +124,10 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 
 	# initialize lists to store populations
 	RGSC <- list()
+	if(phenoRGSC > 0){
+		RGSCtoVDP <- list()
+		RGSCtoVDPmodel <- list()
+	} 
 	GSmodel <- list()
 	predAcc <- list()
 	predAcc[["VDP"]] <- list()
@@ -178,6 +161,10 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	xInt <- if(is.null(setXint)) 1 - selectTrials[nTrial] / selectTrials[1] else setXint 
 	if(verbose) msg(0, "Estimated selection intensity:", round(qnorm(xInt, sd = sqrt(Vg)), 3))
 
+	initSNPAlFreq <- attributes(scale(pullSnpGeno(RGSC[[gen(0)]])))[["scaled:center"]] / 2
+	initQTLAlFreq <- attributes(scale(pullQtlGeno(RGSC[[gen(0)]])))[["scaled:center"]] / 2
+	
+	# txtdensity(initSNPAlFreq)
 	# pop <- RGSC[[gen(0)]]; GSfit <- GSmodel[[gen(0)]]
 	# pop <- RGSC[[lastRGSCgen]]; GSfit <- GSmodel[[lastGSmodel]]
 
@@ -192,6 +179,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
 		selectRGSCi <- if(deltaRGSC) selectRGSC[i] else selectRGSC[1]
+		# selectTrialsi <- selectTrials
 		# nProgenyPerCrossIni <- if(identical(expDistPairs, selFuncIn)) nNuclear / selectRGSCi  * nProgenyPerCrossIn else nProgenyPerCrossIn
 
 		if (i <= nYr){ 
@@ -200,12 +188,11 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			# predict latest RGSC with updated GS model 
 			if (i > 1) {
 				RGSC[[lastRGSCgen]] <- setEBV(RGSC[[lastRGSCgen]], GSmodel[[lastGSmodel]], simParam = simParam)
-				if (pullCycle < cyclePerYr) {
-					# this seems to default to NOT lastGSmodel, but 1 prior... Need to double check
-					# pullGSmodel <- gen(i - 2) # note, this is defaulting to lastGSmodel, which is ok for this design. 
-					pullGSmodel <- gen(i - 1) # note, this should actually be defaulting to lastGSmodel
-					RGSC[[pullRGSCgen]] <- setEBV(RGSC[[pullRGSCgen]], GSmodel[[pullGSmodel]], simParam = simParam)
-				}
+				# update prediction for pull cycle? Maybe not, do inside selFuncOut.
+				# if (pullCycle < cyclePerYr) {
+					# pullGSmodel <- gen(i - 1) # note, this should actually be defaulting to lastGSmodel
+				# 	RGSC[[pullRGSCgen]] <- if(separateTrain) setEBV(RGSC[[pullRGSCgen]], RGSCtoVDPmodel[[pullGSmodel]], simParam = simParam) else setEBV(RGSC[[pullRGSCgen]], GSmodel[[pullGSmodel]], simParam = simParam)
+				# }
 			}
 
 			# estimate VDP selection intensity from previous generations
@@ -220,26 +207,62 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			if(i == 1 | is.null(selFuncOut)){
 				selToP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = useOut)
 			} else {
+				pullGSmodel <- gen(i - 1) # note, this should actually be defaulting to lastGSmodel
 				# select out of RGSC
 				# cyclePerYr - pullCycle + delay * cyclePerYr
 				if(is.null(nGenOut)) nGenOut <- cyclePerYr - pullCycle # if longer you need to count!
-				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RGSC[[pullRGSCgen]], GSfit = GSmodel[c(pullGSmodel, lastGSmodel)], nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
-												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, ...))
-												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, fthreshOut = 0.2))#, ...))
+				# GSmodelOut <- if(separateTrain) RGSCtoVDPmodel[c(pullGSmodel, lastGSmodel)] else GSmodel[c(pullGSmodel, lastGSmodel)]
+				GSmodelOut <- if(separateTrain) RGSCtoVDPmodel[[pullGSmodel]] else GSmodel[[lastGSmodel]]
+				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RGSC[[pullRGSCgen]], GSfit = GSmodelOut, nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
+												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, ...))
+												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, fthreshOut = 0.2))#, ...))
 				# double check this is the correct GS model!!!! Maybe needs to be pullGSmodel???
 			}
 			# check GP accuracy for material to VDP
 			selToP <- setEBV(selToP, GSmodel[[lastGSmodel]], simParam = simParam) #
+
 			predAcc[["RGSCout"]][[gen(i)]] <- getAcc(pop = selToP, simParam = simParam)
 
 			if(verbose) msg(1, "VDP input Vg:", round(varA(selToP), 6))
 			if(verbose) msg(1, "VDP input pop mean:", round(mean(gv(selToP)), 6))
 			famSizei <- round(nFam / nInd(selToP) * famSize) 
-			
+
+			# Save some proportion of RGSC to put into VDP to update training models. 
+			if(phenoRGSC > 0 & i > 1) {
+				RGSCtoVDPgen <- lastRGSCgen
+				# see how many lines from RGSC you can sample, then add back to famSizei
+				newFamSizei <- round(famSizei * (1 - phenoRGSC))
+				availPlots <- (nInd(selToP) * famSizei) - (nInd(selToP) * newFamSizei)
+				RGSCfamSize <- availPlots / nInd(RGSC[[RGSCtoVDPgen]])
+				if(RGSCfamSize < 1) {
+					nRGSC <- RGSCfamSize * nInd(RGSC[[RGSCtoVDPgen]]) 
+					RGSCfamSize <- 1
+					whichRGSCtoVDP <- sample(nInd(RGSC[[RGSCtoVDPgen]]), nRGSC)
+				} else {
+					nRGSC <- nInd(RGSC[[RGSCtoVDPgen]]) 
+					RGSCfamSize <- floor(RGSCfamSize)
+					whichRGSCtoVDP <- 1:nInd(RGSC[[RGSCtoVDPgen]])
+				}
+				availPlots <- availPlots - RGSCfamSize * nRGSC
+				famSizei <- newFamSizei + floor(availPlots / nInd(selToP))
+				
+				if(ssd){
+					RGSCtoVDP[[gen(i)]] <- self(RGSC[[RGSCtoVDPgen]][whichRGSCtoVDP], nProgeny = RGSCfamSize)
+					for(i in 1:(cyclePerYr-1)) RGSCtoVDP <- self(RGSC[[RGSCtoVDPgen]], nProgeny = 1)
+				} else {
+					RGSCtoVDP[[gen(i)]] <- makeDH(RGSC[[RGSCtoVDPgen]][whichRGSCtoVDP], nDH = RGSCfamSize)
+				}
+				if(verbose) {
+					msg(1, nInd(RGSCtoVDP[[gen(i)]]), "inbred lines from", nRGSC, "RGSC included in VDP for making crosses")
+					msg(1, "Family size reduced from", famSize, "to", famSizei)
+				}
+				# selectTrialsi[1] <-  selectTrialsi[1] # dont update, allows for no selection in first
+			}
+
 			if(traditional & i > 1) {
 				if(verbose) msg(1, nInd(selToP), "lines selected out of VDP", lastVDPSel, "for making crosses")
 			} else {
-				if(verbose) msg(1, nInd(selToP), "crosses selected out of", nInd(RGSC[[pullRGSCgen]]), " RGSC population for VDP")
+				if(verbose) msg(1, nInd(selToP), "crosses selected out of", nInd(RGSC[[pullRGSCgen]]), "RGSC population for VDP")
 			}
 			
 			# make DH families or self
@@ -264,9 +287,10 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			} else {
 				if(is.null(nGenInbr)) nGenInbr <- cyclePerYr  
 				VDP[[trials[1]]][[gen(i)]] <- do.call(inbreedFunc[[i]], getArgs(inbreedFunc[[i]], pop = selToP, GSfit = GSmodel[[lastGSmodel]], # use last GS model here because selectOut will burn through the rest of the year. Need to make flexible if not. 
-					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
-					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
+					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
+					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
 			}
+
 			VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = simParam) #
 			predAcc[["VDPin"]][[gen(i)]] <- getAcc(pop = VDP[[trials[1]]][[gen(i)]], simParam = simParam)
 
@@ -283,6 +307,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 		for (g in index) {
 			Vgi <- if (updateVg) varG(VDP[[trials[genBack[g]]]][[gen(genI[g])]])[[1]] else Vg
 			if (!trials[genBack[g]] %in% skip) VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setPheno(VDP[[trials[genBack[g]]]][[gen(genI[g])]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
+			if(phenoRGSC > 0 & i > 1 & g == 1) RGSCtoVDP[[gen(i)]] <- setPheno(RGSCtoVDP[[gen(i)]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
 		}
 
 		if (i <= nYr){
@@ -305,8 +330,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
 					RGSC[[gen(j)]] <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
-					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, fthresh = 0.01))
+					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
+					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, fthresh = 0.01))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) msg(2, "Only", nInd(RGSC[[gen(j)]]), "crosses made in RGSC...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
@@ -325,12 +350,28 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			trnSet <- lapply(VDP[trials[!grepl("variety", trials)]], function(x) x[names(x) %in% gen(max(1, i-max(1, lgen)):i)])
 			trnSet <- trnSet[sapply(trnSet, length) > 0]
 
-			# hope I dont break the recursive merge with this...
-			if(founderKeep >= i) trnSet["founder"] <- RGSC[gen(0)]
+			# include founders in prediction model
+			if(founderKeep >= i) trnSet[["founder"]] <- RGSC[[gen(0)]]
 
-			# CHECK BRACKETS!!!!!!!!!!!!!!!!!
+			# Inlcude RGSC individuals into training
 			if(phenoRGSC > 0) {
-				trnSet["RGSC"] <- RGSC[lastRGSCgen]
+				if(separateTrain) {
+					RGSCtoVDPtrian <- RGSCtoVDP[names(RGSCtoVDP) %in% gen(max(1, i-max(1, lgen)):i)]  
+					if(founderKeep >= i) RGSCtoVDPtrian[["founder"]] <- RGSC[[gen(0)]]
+					RGSCtoVDPtrian <- mergePopsRec(RGSCtoVDPtrian) 
+					msg(1, "Training set for RGSCout branch has", RGSCtoVDPtrian@nInd, "individuals...")	
+					if(!is.null(GSfunc)){
+						RGSCtoVDPmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RGSCtoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+					} else {
+						if(nInd(RGSCtoVDPtrian) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
+							RGSCtoVDPmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = RGSCtoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+						} else {
+							RGSCtoVDPmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = RGSCtoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+						}
+					}
+				} else {
+					trnSet[["RGSCtoVDP"]] <- RGSCtoVDP[names(RGSCtoVDP) %in% gen(max(1, i-max(1, lgen)):i)]
+				}
 			}
 			
 			# concatenate training set and train GS model

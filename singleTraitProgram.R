@@ -63,6 +63,7 @@ defArgs <- list(
 	nGenOut = NULL,
 	nGenInbr = NULL,
 	phenoRGSC = 0,
+	separateTrain = FALSE,
 # chromosome parameters
 	nChrom = 10,
 	nLoci = 100,
@@ -90,7 +91,7 @@ source(defArgs$simFunc)
 
 if(!is.null(defArgs$projName)) defArgs$projName <- paste0(defArgs$projName, "/")
 # make directory to store all results
-simDir <- paste0(parDir, "/results/", defArgs$projName, defArgs$simName) 
+simDir <- paste0(parDir, "/results/", defArgs$projName, "/") 
 system(paste0("simdir=", simDir, "
 if [ ! -d $simdir ]; then
 	mkdir -p $simdir
