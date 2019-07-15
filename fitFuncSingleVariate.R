@@ -173,7 +173,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
-	# for (i in 1:10) { 
+	# for (i in 1:6) { 
 		# i = 1
 		# i = 2
 		lastRGSCgen <- names(RGSC)[length(RGSC)]
@@ -356,7 +356,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			# Inlcude RGSC individuals into training
 			if(phenoRGSC > 0) {
 				if(separateTrain) {
-					RGSCtoVDPtrian <- RGSCtoVDP[names(RGSCtoVDP) %in% gen(max(1, i-max(1, lgen)):i)]  
+					RGSCtoVDPtrian <- RGSCtoVDP
+					# RGSCtoVDPtrian <- RGSCtoVDP[names(RGSCtoVDP) %in% gen(max(1, i-max(1, lgen)):i)]  
 					if(founderKeep >= i) RGSCtoVDPtrian[["founder"]] <- RGSC[[gen(0)]]
 					RGSCtoVDPtrian <- mergePopsRec(RGSCtoVDPtrian) 
 					msg(1, "Training set for RGSCout branch has", RGSCtoVDPtrian@nInd, "individuals...")	
