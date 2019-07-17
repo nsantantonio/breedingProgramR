@@ -13,7 +13,7 @@
 
 
 
-# k = 2; paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL
+# k = 2; paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
 sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
 
 	# parameter checks and warnings.
@@ -204,6 +204,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			}
 			
 			# use selected lines from last trial to make new crosses. Not sure this timeline is realistic...
+			if(verbose) msg(1, "Selecting lines out of RGSC...")
 			if(i == 1 | is.null(selFuncOut)){
 				selToP <- selectInd(RGSC[[lastRGSCgen]], nInd = nFam, trait = 1, use = useOut)
 			} else {
@@ -214,8 +215,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				# GSmodelOut <- if(separateTrain) RGSCtoVDPmodel[c(pullGSmodel, lastGSmodel)] else GSmodel[c(pullGSmodel, lastGSmodel)]
 				GSmodelOut <- if(separateTrain) RGSCtoVDPmodel[[pullGSmodel]] else GSmodel[[lastGSmodel]]
 				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RGSC[[pullRGSCgen]], GSfit = GSmodelOut, nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
-												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, ...))
-												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, fthreshOut = 0.2))#, ...))
+												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, ...))
+												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, fthreshOut = 0.2))#, ...))
 				# double check this is the correct GS model!!!! Maybe needs to be pullGSmodel???
 			}
 			# check GP accuracy for material to VDP
@@ -228,7 +229,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			famSizei <- round(nFam / nInd(selToP) * famSize) 
 
 			# Save some proportion of RGSC to put into VDP to update training models. 
-			if(phenoRGSC > 0 & i > 1) {
+			# if(phenoRGSC > 0 & i > 1) {
+			if(phenoRGSC > 0) {
 				RGSCtoVDPgen <- lastRGSCgen
 				# see how many lines from RGSC you can sample, then add back to famSizei
 				newFamSizei <- round(famSizei * (1 - phenoRGSC))
@@ -287,8 +289,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			} else {
 				if(is.null(nGenInbr)) nGenInbr <- cyclePerYr  
 				VDP[[trials[1]]][[gen(i)]] <- do.call(inbreedFunc[[i]], getArgs(inbreedFunc[[i]], pop = selToP, GSfit = GSmodel[[lastGSmodel]], # use last GS model here because selectOut will burn through the rest of the year. Need to make flexible if not. 
-					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
-					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
+					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
+					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))#, ...))
 			}
 
 			VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = simParam) #
@@ -307,7 +309,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 		for (g in index) {
 			Vgi <- if (updateVg) varG(VDP[[trials[genBack[g]]]][[gen(genI[g])]])[[1]] else Vg
 			if (!trials[genBack[g]] %in% skip) VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setPheno(VDP[[trials[genBack[g]]]][[gen(genI[g])]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
-			if(phenoRGSC > 0 & i > 1 & g == 1) RGSCtoVDP[[gen(i)]] <- setPheno(RGSCtoVDP[[gen(i)]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
+			if(phenoRGSC > 0 & i > 1 & g == 1 & i <= nYr) RGSCtoVDP[[gen(i)]] <- setPheno(RGSCtoVDP[[gen(i)]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
 		}
 
 		if (i <= nYr){
@@ -330,8 +332,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {
 					RGSC[[gen(j)]] <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRGSCi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
-					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, fthresh = 0.01))
+					trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
+					# trait = 1,  use = useIn, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, fthresh = 0.01))
 					if(nInd(RGSC[[gen(j)]]) != nNuclear) msg(2, "Only", nInd(RGSC[[gen(j)]]), "crosses made in RGSC...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
@@ -349,7 +351,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 			# so this removes the selections from the training population. 
 			trnSet <- lapply(VDP[trials[!grepl("variety", trials)]], function(x) x[names(x) %in% gen(max(1, i-max(1, lgen)):i)])
 			trnSet <- trnSet[sapply(trnSet, length) > 0]
-
+			names(trnSet)
 			# include founders in prediction model
 			if(founderKeep >= i) trnSet[["founder"]] <- RGSC[[gen(0)]]
 
@@ -358,7 +360,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				if(separateTrain) {
 					RGSCtoVDPtrian <- RGSCtoVDP
 					# RGSCtoVDPtrian <- RGSCtoVDP[names(RGSCtoVDP) %in% gen(max(1, i-max(1, lgen)):i)]  
-					if(founderKeep >= i) RGSCtoVDPtrian[["founder"]] <- RGSC[[gen(0)]]
+					if(founderKeep >= i) RGSCtoVDPtrian["founder"] <- RGSC[gen(0)]
 					RGSCtoVDPtrian <- mergePopsRec(RGSCtoVDPtrian) 
 					msg(1, "Training set for RGSCout branch has", RGSCtoVDPtrian@nInd, "individuals...")	
 					if(!is.null(GSfunc)){

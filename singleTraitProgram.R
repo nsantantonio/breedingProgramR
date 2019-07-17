@@ -91,7 +91,7 @@ source(defArgs$simFunc)
 
 if(!is.null(defArgs$projName)) defArgs$projName <- paste0(defArgs$projName, "/")
 # make directory to store all results
-simDir <- paste0(parDir, "/results/", defArgs$projName, "/") 
+simDir <- paste0(parDir, "/results/", defArgs$projName) 
 system(paste0("simdir=", simDir, "
 if [ ! -d $simdir ]; then
 	mkdir -p $simdir
@@ -144,5 +144,5 @@ if(system("hostname", intern = TRUE) == "Bender") {
 }
 
 simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps, .errorhandling='pass') %dopar% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-msg(0, "saving results in", paste0(simDir, "/", defArgs$simName, ".RData"))
-save(simrun, SP, file = paste0(simDir, "/", defArgs$simName, ".RData"))
+msg(0, "saving results in", paste0(simDir, defArgs$simName, ".RData"))
+save(simrun, SP, file = paste0(simDir,  defArgs$simName, ".RData"))
