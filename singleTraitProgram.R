@@ -12,8 +12,8 @@ defArgs <- list(
 	simName = "testSim",
 	simFunc = "fitFuncSingleVariate.R", 
 	maxIter = 1000L,
-	reps = 10,
-	nFounderPops = 10,
+	reps = 1,
+	nFounderPops = 1,
 	lgen = 5,
 	useTruth = 0, # make this an integer, 1 = use QTL, 2 = use true effects?
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
@@ -70,8 +70,6 @@ defArgs <- list(
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
 )
-
-type.convert(list(A = "TRUE", B = "10"))
 
 stdArgNames <- names(defArgs)
 defArgs <- getComArgs(defArgs)

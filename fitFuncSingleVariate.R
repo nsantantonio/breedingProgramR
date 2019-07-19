@@ -30,8 +30,6 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	selFuncStop <- c(" is a list, but of the wrong structure. Please provide either a single function, a list of functions for for each year, each cycle, or a nested list of length 'nYr' with each element of length 'cyclePerYr'")
 	if(phenoRGSC < 0 | phenoRGSC > 1) stop("'phenoRGSC' must be between 0 and 1 representing the proportion of the first VDP trial dedicated to phenotyping the RGSC!")
 
-	if(is.null(pullCycle)) pullCycle <- cyclePerYr
-
 	if(is.list(selFuncIn)) {
 		if (length(selFuncIn) %in% c(cyclePerYr, nYr, cyclePerYr * nYr)) {
 			if(all(sapply(selFuncIn, class) == "list")){
@@ -120,6 +118,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	}
 
 	# define cycles
+	if(is.null(pullCycle)) pullCycle <- cyclePerYr
 	cycle <- 1:cyclePerYr
 
 	# ignore GS models if only phenotypes used. 
@@ -269,8 +268,10 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 
 			if(traditional > 0 & i > 1) {
 				if(verbose) msg(1, nInd(selToP), "lines selected out of VDP", VDPsel, "for making crosses")
-			} else {
+			} else if(i > 1) {
 				if(verbose) msg(1, nInd(selToP), "crosses selected out of", nInd(RGSC[[pullRGSCgen]]), "RGSC population for VDP")
+			} else {
+				if(verbose) msg(1, nInd(selToP), "crosses selected out of", nInd(RGSC[[gen(0)]]), "founder population for VDP")
 			}
 			
 			# make DH families or self
