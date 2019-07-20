@@ -80,6 +80,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	if(length(returnVDPtoRGSC) != length(selectTrials) + 1) stop("returnVDPtoRGSC must be of length(selectTrials) + 1 (for variety)!")
 	if (all(returnVDPtoRGSC <= 1)) returnVDPtoRGSC <- returnVDPtoRGSC * c(nI, selectTrials) 
 
+	if (withinFamInt > 1) withinFamInt <- famSize / ((nI + withinFamInt) / nFam)
+
 	# count and rename trials
 	nTrial <- length(selectTrials)
 	trials <- c(paste0("trial", 1:nTrial), "variety")
