@@ -9,3 +9,4 @@ logs/
 test*
 expectedVarianceOfSelfing.R
 runCBSU.sh
+oldScripts/

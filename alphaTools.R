@@ -103,7 +103,113 @@ getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
 
 # }
 
+
+# pop <- selPop; nCrosses = selectRGSCi; use = "pheno"; intWithin = 0.5; intAcross = 1; equalWeight = FALSE; useFamPrior = FALSE
+tradSelCross <- function(pop, nCrosses, nFam, famSize, families, use, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
+# RGSC[[gen(j)]] <- tradSel(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
+	# lpop <- function(x, l, whichElem = NULL) {
+	# 	whichElem <- if(is.null(whichElem)) which(sapply(l, function(elem) x %in% elem))
+	# 	for(i in whichElem) l[[i]] <- l[[i]][!l[[i]] %in% x]
+	# 	l
+	# }
+	if(is.character(use)) use <- match.fun(use)
+
+	if(!all(pop@id %in% unlist(families))) stop("wrong family information... fix me!")
+	famL <- lapply(families, function(x) x[x %in% pop@id])
+	repFam <- sapply(famL, length) > 0
+	famNum <- sum(repFam)
+
+	nFamSel <- ceiling(nFam * intAcross)
+	if(famNum < nFamSel) cat("NOTE: insufficient families represented to use specified intAcross. Using individuals from all", nFam ,"families")
+
+	famMeans <- sapply(famL[repFam], function(x) mean(use(pop[x])))
+	famSel <- names(sort(famMeans, decreasing = TRUE))[1:nFamSel]
+
+	candFamL <- famL[famSel]
+	inFamNum <- famSize * intWithin
+
+	parentL <- list()
+	for(i in famSel) {
+		parentL[[i]] <- selectInd(pop[candFamL[[i]]], nInd = min(nInd(pop[candFamL[[i]]]), inFamNum))
+		parentL[[i]] <- parentL[[i]][order(use(parentL[[i]]), decreasing = TRUE)]
+	}
+
+	selFamMeans <- sapply(parentL, function(x) mean(use(x)))
 	
+	parents <- mergePopsRec(parentL)
+	parents <- parents[order(use(parents), decreasing = TRUE)]
+	parNames <- parents@id
+
+	if(choose(nInd(parents), 2) < nCrosses) {
+		cat("NOTE: insufficient individuals to make desired number of unique crosses! Some mate pairs will be repeated...")
+		nTimes <- ceiling(nCrosses / choose(nInd(parents), 2))
+		selL <- list(t(combn(parents@id, 2)))
+		selection <- do.call(rbind, rep(selL, nTimes - 1))
+		selection <- rbind(selection, selL[[1]][sample(1:nrow(selL[[1]])), ])[1:nCrosses, ]
+	} else {
+		selection <- list()
+		if(intWithin == 1) {
+			wp <- 1
+			for(i in 1:nCrosses) {
+				p1 <- parNames[1]
+				diffFam <- !sapply(candFamL, function(f) p1 %in% f)
+				cand <- parNames[parNames %in% unlist(candFamL[diffFam])]
+				if(length(parNames) <= 1) {
+					parNames <- parents@id
+					wp <- wp + 1
+				}
+				p2 <- parNames[parNames %in% unlist(candFamL[diffFam])][[wp]]
+				selection[[i]] <- c(p1, p2)
+				parNames <- parNames[!parNames %in% c(p1, p2)]
+			}
+		} else {
+		# select by family
+	# maxC <- NULL
+	# for(k in 1:1000){
+
+		# selection <- list()
+
+			famPairs <- combn(famSel, 2)
+			fm <- if (useFamPrior) famMeans[famSel] else selFamMeans 
+			# inFamWeights <- lapply(parentL, function(x) use(x) / sum(use(x)))
+			inFamWeights <- lapply(parentL, function(x) use(x)^2 / sum(use(x)^2))
+			pbar <- combn(fm, 2, FUN = mean)
+			# w <- if (equalWeight) rep(1/nFamSel, nFamSel) else pbar / sum(pbar)
+			w <- if (equalWeight) rep(1/nFamSel, nFamSel) else pbar^2 / sum(pbar)^2
+ 			withRep <- if(nCrosses > choose(nFamSel, 2)) TRUE else FALSE
+			whichPairs <- sample(1:ncol(famPairs), nCrosses, replace = withRep, prob = w)
+			for(i in 1:nCrosses){
+				pairi <- famPairs[, whichPairs[i]]
+				p1 <- sample(parentL[[pairi[1]]]@id, 1, prob = c(inFamWeights[[pairi[1]]]))
+				p2 <- sample(parentL[[pairi[2]]]@id, 1, prob = c(inFamWeights[[pairi[2]]]))
+				selection[[i]] <- c(p1, p2)
+			}
+		}
+		if(any(sapply(selection, function(x) length(unique(x))) != 2)) stop("something wrong happened!")
+		selection <- do.call(rbind, selection)
+		# if(verbose) table(c(selection))
+		
+		# tab <- table(c(selection))
+		# tabdf <- data.frame(count = c(tab), id = names(tab))
+		# dF <- data.frame(val = use(parents), id = parents@id)
+		# dF <- merge(dF, tabdf, by = "id")
+		# dF <- dF[order(dF$val, decreasing = TRUE), ]
+		# dF
+		# with(dF, cor(val, count))
+		# maxC[[k]] <- which.max(dF$count)
+		# }
+	}
+
+
+	# if(nEx > 1) selection <- selection[rep(1:nrow(selection), times = nEx)[1:nCrosses], ]
+	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
+	newpop <- makeCross(pop, crossPlan = selection) 
+	if(verbose) cat("Selection mean:", mean(gv(newpop)), "from pop mean:", mean(gv(pop)), "\n")
+	# if(verbose){
+	# 	msg(2, "Selected population variance diff:", {varA(newpop) - varA(pop)})
+	# 	msg(2, "Selected population mean diff:", {mean(gv(newpop)) - mean(gv(popMean))})
+	# }
+}
 
 
 # }
