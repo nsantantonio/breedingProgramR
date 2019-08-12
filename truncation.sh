@@ -9,7 +9,7 @@ famSize=(25 50 100 200)
 reps=1
 nFounderPops=100
 nThreads=35
-nYr=20
+nYr=30
 QTL=1000QTL
 
 # Removed the low heritability trial
