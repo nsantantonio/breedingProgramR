@@ -42,6 +42,7 @@ formatPop <- function(popL, depth = 1, meanVariety = TRUE, removeErr = TRUE){
     # for(i in 1:length(popL[[1]])) z[i] <- popL[[1]][[i]][["paramL"]][["nFam"]]
     nVar <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {tail(with(x[["paramL"]], nFam * famSize * cumprod(selectTrials)), 1)}, combine = c))))
     cyclePerYr <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["cyclePerYr"]]}, combine = c))))
+    trad <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["traditional"]]}, combine = c))))
 
     simStats <- rlapply(popL, function(x) {x[!names(x) %in% c("SP", "paramL", "VgVDP", "gvVDP", "VDPacc")]}, level = depth)
    
@@ -53,6 +54,7 @@ formatPop <- function(popL, depth = 1, meanVariety = TRUE, removeErr = TRUE){
     simAvg <- rlapply(simReps, f = colMeans, level = depth, na.rm = TRUE)
 
     RGSCyr <- get1(simAvg, "RGSCyr", depth - 1)
+    # if(all(trad > 0)) 
     RGSCgen <- get1(simAvg, "Rcyc", depth - 1)
     yr <- RGSCyr / cyclePerYr
     xlims <- range(c(0, RGSCgen))
@@ -79,8 +81,8 @@ parDir <- getwd()
 source(paste0(parDir, "/alphaTools.R"))
 
 
-defArgs <- list(filenames = c('results/quadprog/quadprog30yr1000QTL_quadprog_fin0.05_fout0.05_N1_pull0_truth1_rgsc0.2_vdp4x25.RData', 'results/quadprog/quadprog30yr1000QTL_quadprog_fin0.05_fout0.2_N1_pull0_truth0_rgsc0.2_vdp4x25.RData'),
-figDir = "test", figName = "test.pdf", labels = NULL)
+defArgs <- list(filenames = c('results/traditional/traditional30yr1000QTL_trad2_intWithin1_intAcross1_truth0_vdp20x75.RData', 'results/traditional/traditional30yr1000QTL_trad3_intWithin1_intAcross1_truth0_vdp20x75.RData'),
+figDir = "figures/test", figName = "test.pdf", labels = NULL)
 defArgs <- getComArgs(defArgs)
 
 if(is.null(defArgs[["labels"]])) defArgs[["labels"]] <- 1:length(defArgs[["filenames"]])

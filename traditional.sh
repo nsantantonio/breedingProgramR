@@ -7,7 +7,7 @@ famSize=(50 75 100)
 
 reps=1
 nFounderPops=100
-nThreads=50
+nThreads=35
 nYr=30
 QTL=1000QTL
 lgen=4
@@ -16,11 +16,11 @@ selectTrials=("c(0.5, 0.2, 0.5, 0.4)" \
               "c(0.5, 0.10, 0.4, 1/3)" \
               "c(0.5, 0.05, 0.4, 0.25)" )
 
-# # test!
+# # # test!
 # for i in 1; do 
 #     for j in 0; do
 #         for t in 2; do
-#             for k in 0.5; do
+#             for k in 0.2 0.1; do
 #                 for l in 0.5; do
 #             tmpSimName="${projName}${nYr}yr${QTL}_trad${t}_intWithin${k}_intAcross${l}_truth${j}_vdp${nFam[$i]}x${famSize[$i]}"
 #             args=("nThreads=${nThreads}" \
@@ -44,6 +44,7 @@ selectTrials=("c(0.5, 0.2, 0.5, 0.4)" \
 #         done
 #     done
 # done
+
 
 # traditional selection, no additional selection
 for i in {0..2}; do 
