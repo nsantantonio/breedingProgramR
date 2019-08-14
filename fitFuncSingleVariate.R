@@ -246,9 +246,9 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				selToP <- setEBV(selToP, GSmodel[[lastGSmodel]], simParam = simParam) #
 				predAcc[["RGSCout"]][[gen(i)]] <- getAcc(pop = selToP, simParam = simParam)
 			}
-			if(useOut == "pheno"){
+			# if(useOut == "pheno"){
 
-			}
+			# }
 			
 			if(verbose) msg(1, "VDP input Vg:", round(varA(selToP), 6))
 			if(verbose) msg(1, "VDP input pop mean:", round(mean(gv(selToP)), 6))

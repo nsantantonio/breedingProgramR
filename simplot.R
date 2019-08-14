@@ -118,20 +118,26 @@ source(paste0(parDir, "/alphaTools.R"))
 # 				projDir = "truncVSquadprog/", 
 # 				figDir = "figures/temp"
 # 				)
+# truncVSquadprog20yr1000QTL_quadprog_fin0.01_fout0.2_N1_pull0_phRS0.2_sepTrn0_truth0_rgsc0.2_vdp10x50
+# truncVSquadprog20yr1000QTL_trad1_intWithin1_intAcross1_truth0_vdp10x50
 
-defArgs <- list(QTL = c("1000"),#, "100QTL", "10QTL"),
+
+defArgs <- list(QTL = c(1000),#, "100QTL", "10QTL"),
 				select = c("quadprog"),
-				fin = c("0.01"),
-				fout = c("0.1"),
-				N = c("1"),
-				pull = c(1),
-				truth = c("0", "1", "2"),
+				fin = c(0.01),
+				fout = c(0.2),
+				N = c(1),
+				pull = c(0),
+				phRS = c(0.2, 0.4),
+				sepTrn = c(0),
+				truth = c(0),
 				crossSel = c("rgsc0.2"), 
 				VDP = c("10x50"),
+				intWithin = 0.2,
+				intAcross = 1,
 				simName = "truncVSquadprog20yr", 
-				projDir = "truncVSquadprog/", 
-				figDir = "figures/temp"
-				)
+				projDir = "separateTrain/", 
+				figDir = "figures/sepTrain")
 
 byVDP <- TRUE
 defArgs <- getComArgs(defArgs)
@@ -142,6 +148,10 @@ defArgs$fin[defArgs$fin != "" & !is.na(defArgs$fin)] <- paste0("fin", defArgs$fi
 defArgs$fout[defArgs$fout != "" & !is.na(defArgs$fout)] <- paste0("fout", defArgs$fout[defArgs$fout != "" & !is.na(defArgs$fout)])
 defArgs$N[defArgs$N != "" & !is.na(defArgs$N)] <- paste0("N", defArgs$N[defArgs$N != "" & !is.na(defArgs$N)])
 defArgs$pull[defArgs$pull != "" & !is.na(defArgs$pull)] <- paste0("pull", defArgs$pull[defArgs$pull != "" & !is.na(defArgs$pull)])
+defArgs$phRS[defArgs$phRS != "" & !is.na(defArgs$phRS)] <- paste0("phRS", defArgs$phRS[defArgs$phRS != "" & !is.na(defArgs$phRS)])
+defArgs$intWithin[defArgs$intWithin != "" & !is.na(defArgs$intWithin)] <- paste0("intWithin", defArgs$intWithin[defArgs$intWithin != "" & !is.na(defArgs$intWithin)])
+defArgs$intAcross[defArgs$intAcross != "" & !is.na(defArgs$intAcross)] <- paste0("intAcross", defArgs$intAcross[defArgs$intAcross != "" & !is.na(defArgs$intAcross)])
+defArgs$sepTrn[defArgs$sepTrn != "" & !is.na(defArgs$sepTrn)] <- paste0("sepTrn", defArgs$sepTrn[defArgs$sepTrn != "" & !is.na(defArgs$sepTrn)])
 defArgs$truth <- paste0("truth", defArgs$truth)
 defArgs$VDP <- paste0("vdp", defArgs$VDP)
 
@@ -149,7 +159,7 @@ attach(defArgs)
 # argList <- as.list(commandArgs(TRUE))
 # argList <- c("truncSel_truncCross" "truncSel_expDistPairs" "truncSel_simDHdistPairs")
 
-factors <- defArgs[c("QTL", "select", "fin", "fout", "N", "pull", "truth", "crossSel", "VDP")]
+factors <- defArgs[c("QTL", "select", "fin", "fout", "N", "pull", "phRS", "sepTrn", "intWithin", "intAcross", "truth", "crossSel", "VDP")]
 factl <- sapply(factors, length)
 vary <- which(factl > 1)
 vary <- vary[!names(vary) %in% c("truth", "VDP")]
@@ -167,8 +177,10 @@ for(i in factors[[vary]]){
 		for(k in VDP){	
 			factijk <- factij
 			factijk[["VDP"]] <- k
-			simNameij <- gsub("[_]+", "_", paste0(c(simName, unlist(factijk)), c("", "_", "_", "_", "_", "_", "_", "_", "_", ""), collapse = ""))
-			load(paste0(parDir, "/results/", projDir, simNameij, "/", simNameij, ".RData"))
+			simNameij <- gsub("[_]+", "_", paste0(c(simName, unlist(factijk[!names(factijk) %in% c("intWithin", "intAcross")])), c("", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", ""), collapse = ""))
+			# load(paste0(parDir, "/results/", projDir, simNameij, "/", simNameij, ".RData"))
+			load(paste0(parDir, "/results/", projDir, simNameij, ".RData"))
+			cat(simNameij, "has", length(simrun), "founder pops with", length(simrun[[1]]), "reps...\n")
 			popList[[i]][[j]][[k]] <- simrun 
 			nullsim <- sapply(simrun, is.null)
 			if(any(nullsim)) cat(simNameij, "has", sum(nullsim), "missing replicates!!!\n")
@@ -185,10 +197,10 @@ for(j in truth) {
 	for(k in VDP){	
 		factijk <- factij
 		factijk[["VDP"]] <- k
-
 		simNameTruncj <- gsub("[_]+", "_", paste0(c(simName, unlist(factijk[c("QTL", "select", "truth", "crossSel", "VDP")])), c("",  "_", "_", "_", "_", ""), collapse = ""))
 
-		load(paste0(parDir, "/results/", projDir, simNameTruncj, "/", simNameTruncj, ".RData"))
+		load(paste0(parDir, "/results/truncation/", simNameTruncj, ".RData"))
+		cat(simNameTruncj, "has", length(simrun), "founder pops with", length(simrun[[1]]), "reps...\n")
 		popList[["trunc"]][[j]][[k]] <- simrun 
 		nullsim <- sapply(simrun, is.null)
 		if(any(nullsim)) cat(simNameTruncj, "has", sum(nullsim), "missing replicates!!!\n")
@@ -196,58 +208,50 @@ for(j in truth) {
 }
 
 
-# popList <- list()
-# for(i in QTL){
-# 	for(j in select[!select %in% "trunc"]){
-# 		for(k in fin[!(fin %in% "" | is.na(fin))]){
-# 			for(l in fout[!(fout %in% "" | is.na(fout))]){
-# 				for(m in N[!(N %in% "" | is.na(N))]){
-# 					for(n in pull[!(pull %in% "" | is.na(pull))]){
-# 						for(o in truth){
-# 							for(p in crossSel){
-# 								for(q in VDP){
-# 									if(n == "pull3") {l <- m <- ""}
-# 									# simNameijklm <- paste0(c(simName, c(i, j, k, l, m)), c("", "", "_", "", "_", ""), collapse = "")
-# 									simNameijklmnopq <- gsub("[_]+", "_", paste0(c(simName, c(i, j, k, l, m, n, o , p, q)), c("", "_", "_", "_", "_", "_", "_", "_", "_", ""), collapse = ""))
-# 									load(paste0(parDir, "/results/", projDir, simNameijklmnopq, "/", simNameijklmnopq, ".RData"))
-# 									if(byVDP) popList[[i]][[j]][[k]][[m]][[l]][[n]][[o]][[p]][[q]] <- simrun 
-# 									nullsim <- sapply(simrun, is.null)
-# 									if(any(nullsim)) cat(simNameijklmnopq, "has", sum(nullsim), "missing replicates!!!\n")
-# 								}
-# 							}
-# 						}
-# 					}
-# 				}
-# 			}
-# 		}
+facti <- factors
+for(j in truth) {
+	factij <- facti
+	factij[["truth"]] <- j
+
+	factij[["select"]] <- "trad2"
+	for(k in VDP){	
+		factijk <- factij
+		factijk[["VDP"]] <- k
+
+		simNameTruncj <- gsub("[_]+", "_", paste0(c(simName, unlist(factijk[c("QTL", "select", "intWithin", "intAcross", "truth", "VDP")])), c("",  "_", "_", "_", "_", "_", ""), collapse = ""))
+
+		load(paste0(parDir, "/results/traditional/", simNameTruncj, ".RData"))
+		cat(simNameTruncj, "has", length(simrun), "founder pops with", length(simrun[[1]]), "reps...\n")
+
+		popList[["trad"]][[j]][[k]] <- simrun 
+		nullsim <- sapply(simrun, is.null)
+		if(any(nullsim)) cat(simNameTruncj, "has", sum(nullsim), "missing replicates!!!\n")
+	}
+}
+
+
+# facti <- factors
+# for(j in truth) {
+# 	factij <- facti
+# 	factij[["truth"]] <- j
+
+# 	factij[["select"]] <- "trad1"
+# 	for(k in VDP){	
+# 		factijk <- factij
+# 		factijk[["VDP"]] <- k
+
+# 		simNameTruncj <- gsub("[_]+", "_", paste0(c(simName, unlist(factijk[c("QTL", "select", "truth", "VDP")])), c("",  "_", "_", "_", ""), collapse = ""))
+
+# 		load(paste0(parDir, "/results/traditional/", simNameTruncj, ".RData"))
+# 		cat(simNameTruncj, "has", length(simrun), "founder pops with", length(simrun[[1]]), "reps...\n")
+
+# 		popList[["trad1"]][[j]][[k]] <- simrun 
+# 		nullsim <- sapply(simrun, is.null)
+# 		if(any(nullsim)) cat(simNameTruncj, "has", sum(nullsim), "missing replicates!!!\n")
 # 	}
 # }
 
-# # load trunc
-# for(i in QTL){
-# 	for(j in select[select %in% "trunc"]){
-# 		for(n in truth){
-# 			for(o in crossSel){
-# 				for(q in VDP){
-# 					simNameijnop <- gsub("[_]+", "_", paste0(c(simName, c(i, j, n, o, q)), c("", "_", "_", "_", "_", ""), collapse = ""))
-# 					if(j == "trunc") {k <- l <- m <- "trunc"}
-# 					load(paste0(parDir, "/results/", projDir, simNameijnop, "/", simNameijnop, ".RData"))
-# 					if(byVDP) popList[[i]][[j]][[k]][[m]][[l]][[n]][[o]][[p]][[q]] <- simrun 
-# 					nullsim <- sapply(simrun, is.null)
-# 					if(any(nullsim)) cat(simNameijnop, "has", sum(nullsim), "missing replicates!!!\n")
-# 				}
-# 			}
-# 		}
-# 	}
-# }
 
-
-# cols <- c("#006600", "#00008C", "#660000", "#8C8C00", "#660066", "#006666")
-# cols <- cols[1:length(popList[[1]])]
-
-
-# popListHOLD <- popList
-# popList <- popListHOLD
 
 popList <- rlapply(popList, level = 3, f = unlist, recursive = FALSE)
 statList <- formatPop(popList, depth = 4)
@@ -267,7 +271,8 @@ else
 fi"))
 
 # select <- names(statList[["varL"]])
-select = c("trunc", names(statList[["varL"]])[names(statList[["varL"]]) != "trunc"])
+# select = c("trad2", "trunc", names(statList[["varL"]])[!names(statList[["varL"]]) %in% c("trad2","trunc")])
+select = c("trad", names(statList[["varL"]])[!names(statList[["varL"]]) %in% c("trad")])
 # select = c("quadprog_fin0.01_pull3", "quadprog_fin0.01_fout0.1_N1_pull0", "quadprog_fin0.01_fout0.2_N1_pull0", "quadprog_fin0.01_fout0.3_N1_pull0")
 
 # for(i in names(statList$varL[[1]])){ # "trunc" "quadprog_fin0.005_fout0.2" "quadprog_fin0.01_fout0.2" 

@@ -10,3 +10,4 @@ test*
 expectedVarianceOfSelfing.R
 runCBSU.sh
 oldScripts/
+singleTraitProgramTEST.R

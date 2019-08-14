@@ -14,7 +14,7 @@ defArgs <- list(
 	maxIter = 1000L,
 	reps = 1,
 	nFounderPops = 1,
-	lgen = 5,
+	lgen = 4,
 	useTruth = 0, # make this an integer, 1 = use QTL, 2 = use true effects?
 	traditional = FALSE, # this selects out of VDP as parents, no RGSC
 # founder parameters
@@ -24,7 +24,7 @@ defArgs <- list(
 	simpleFounder = FALSE,
 	founderBurnIn = 1,
 	founderReps = 1,
-	founderKeep = 5,
+	founderKeep = 4,
 # selection parameters
 	selectRGSC = 0.2,
 	pullCycle = NULL, 
@@ -133,8 +133,8 @@ SP$addSnpChip(defArgs$nM)
 loci <- pullLoci(SP)
 # Reduce(intersect, loci)
 
-
 if(system("hostname", intern = TRUE) == "Bender") {
+	print("Bender is great!")
 	setMKLthreads(1)
 	registerDoMC(defArgs$nThreads)
 } else {
