@@ -75,34 +75,34 @@ for i in {0..2}; do
 done
 
 
-for i in {0..2}; do 
-    for j in 2 1 0; do
-        for t in 1 2 3; do
-            for k in 0.2 0.5 1; do
-                for l in 0.5 1; do
-            tmpSimName="${projName}${nYr}yr${QTL}_trad${t}_add300_intWithin${k}_intAcross${l}_truth${j}_vdp${nFam[$i]}x${famSize[$i]}"
-            args=("nThreads=${nThreads}" \
-                "nYr=${nYr}" \
-                "lgen=$lgen" \
-                "simName=$tmpSimName" \
-                "projName=${projName}" \
-                "reps=${reps}" \
-                "nFounderPops=${nFounderPops}" \
-                "selectRGSC=0.2" \
-                "useTruth=${j}" \
-                "nFam=${nFam[$i]}" \
-                "famSize=${famSize[$i]}"\
-                "traditional=${t}"\
-                "withinFamInt=300"\
-                "selectTrials=${selectTrials[$i]}" \
-                "intWithin=${k}" \
-                "intAcross=${l}")
-            Rscript $(pwd)/singleTraitProgram.R "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
-                done
-            done
-        done
-    done
-done
+# for i in {0..2}; do 
+#     for j in 2 1 0; do
+#         for t in 1 2 3; do
+#             for k in 0.2 0.5 1; do
+#                 for l in 0.5 1; do
+#             tmpSimName="${projName}${nYr}yr${QTL}_trad${t}_add300_intWithin${k}_intAcross${l}_truth${j}_vdp${nFam[$i]}x${famSize[$i]}"
+#             args=("nThreads=${nThreads}" \
+#                 "nYr=${nYr}" \
+#                 "lgen=$lgen" \
+#                 "simName=$tmpSimName" \
+#                 "projName=${projName}" \
+#                 "reps=${reps}" \
+#                 "nFounderPops=${nFounderPops}" \
+#                 "selectRGSC=0.2" \
+#                 "useTruth=${j}" \
+#                 "nFam=${nFam[$i]}" \
+#                 "famSize=${famSize[$i]}"\
+#                 "traditional=${t}"\
+#                 "withinFamInt=300"\
+#                 "selectTrials=${selectTrials[$i]}" \
+#                 "intWithin=${k}" \
+#                 "intAcross=${l}")
+#             Rscript $(pwd)/singleTraitProgram.R "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+#                 done
+#             done
+#         done
+#     done
+# done
 
 
 
