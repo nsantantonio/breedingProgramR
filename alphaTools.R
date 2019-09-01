@@ -157,6 +157,8 @@ tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, be
 		inFamWeights <- lapply(parentL, function(x) use(x)^2 / sum(use(x)^2))
 		w <- if (equalWeight) rep(1/nFamSel, nFamSel) else fm^2 / sum(fm^2)
 		whichFams <- sample(famSel, nCrosses, replace = TRUE, prob = w)
+	} else {
+		whichFams <- sapply(parNames, function(x) names(candL)[sapply(candL, function(xx) x %in% xx)])
 	}
 
 	selection <- list()
@@ -185,8 +187,6 @@ tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, be
 		selection[[i]] <- c(p1, p2)
 		if(length(p1) > 1 | length(p2) > 1) break
 	}
-
-	selection
 
 	selection <- do.call(rbind, selection)
 	crossFamilies <- lapply(candL, function(x) x[x %in% selection[, 1]])
