@@ -165,7 +165,7 @@ tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use,
 		p1 <- if(best) parNames[i] else sample(candL[[whichFams[i]]], 1, prob = c(inFamWeights[[whichFams[i]]]))
 		notRelated <- !elNames %in% famL[[whichFams[i]]]
 		if(sum(notRelated) == 0) {
-			nR <- !elite@id %in% famL[[whichFams[i]]]
+			nR <- !elitepop@id %in% famL[[whichFams[i]]]
 			if(sum(nR) == 0){
 				msg(1, "No unrelated selection candidates! Using lines from another family in same generation... ")
 				otherFam <- sample(famSel[!famSel %in% whichFams[i]], 1)
@@ -192,7 +192,7 @@ tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use,
 	if(verbose) msg(2, "Number of lines selected from each family for crosses:", sapply(crossFamilies, length))
 
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	newpop <- makeCross(mergePopsRec(list(pop, elite)), crossPlan = selection) 
+	newpop <- makeCross(mergePopsRec(list(pop, elitepop)), crossPlan = selection) 
 
 	if(verbose) msg(2, "Selection mean:", round(mean(gv(newpop)), 6), "from pop mean:", round(mean(gv(pop)), 6))
 	newpop
