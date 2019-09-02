@@ -378,7 +378,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				}
 				# run GS model to cycle through RGSC for year i
  				if(traditional > 0) {
-					RGSC[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elite = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
+					RGSC[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elitepop = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
 						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
 						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
 				} else if(is.null(selFuncIn)){

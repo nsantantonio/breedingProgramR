@@ -107,8 +107,8 @@ getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
 
 
 
-# pop <- selPop; elitepop = tail(elite, 1)[[1]]; nCrosses = nFam; use = "pheno"; intWithin = 0.5; intAcross = 0.5; equalWeight = FALSE; useFamPrior = FALSE; best = FALSE
-tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, best = FALSE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
+# pop <- selPop; elitepop = tail(elite, 1)[[1]]; nCrosses = nFam; use = "pheno"; intWithin = 0.2; intAcross = 0.5; equalWeight = FALSE; useFamPrior = FALSE; best = FALSE
+tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use, best = FALSE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
 	if(is.character(use)) use <- match.fun(use)
 
 	if(any(table(elitepop@id) > 1)) msg(2, "WARNING: some elites repeated!")
