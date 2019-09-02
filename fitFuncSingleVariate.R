@@ -138,6 +138,7 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	intensity <- list()
 	names(trials) <- trials
 	VDP <- lapply(trials, function(x) list())
+	if(traditional > 0) elite <- list() else elite <- NULL
 	if(SP$isTrackPed) ped <- list()
 
 	# initialize nuclear population, train GS model (necessary?), predict ebv (note the ebv's should be bad if markers are not exactly on QTL) 
@@ -178,9 +179,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 	pullRGSCgen <- gen(0)
 	pullGSmodel <- gen(0)
 
-	if(!exists("nElite")) nElite <- nFam
-	if(traditional > 0) elite <- selectInd(RGSC[[gen(0)]], nInd = min(nInd(RGSC[[gen(0)]]), nElite), use = useIn)
-
+	if(!exists("nElite")) nElite <- nFam 
+	if(traditional > 0) elite[[gen(0)]] <- selectInd(RGSC[[gen(0)]], nInd = min(nInd(RGSC[[gen(0)]]), nElite), use = useIn)
 	# sapply(RGSC, function(x){mean(gv(x))})
 	# rlapply(VDP, function(x){mean(gv(x))}, level = 2, combine = c)
 	# run program for nYr years
@@ -194,11 +194,19 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 		# nProgenyPerCrossIni <- if(identical(expDistPairs, selFuncIn)) nNuclear / selectRGSCi  * nProgenyPerCrossIn else nProgenyPerCrossIn
 
 		# update elite pop from previous year
-		if(i > 1 & traditional > 0) {
-			mostAdvancedTrial <- tail(which(sapply(VDP[trials[-length(trials)]], length) > 0), 1)
-			elSel <- if(i <= traditional) VDP[mostAdvancedTrial] else lapply(VDP, tail, 1)[trials[{traditional + 1}:mostAdvancedTrial]] 
-			elite <- selectInd(mergePopsRec(elSel), nInd = nElite, use = useIn)
-			rm(elSel)
+		if (traditional > 0){
+			if(i == 1){
+				elite[[gen(i)]] <- elite[[gen(0)]]
+				# if(nElite > nFam) elite[[gen(i)]] <- elite[[gen(i)]][sample(nElite, nFam)]
+			} else if(i == 2 & nElite > nFam){
+				elite[[gen(i)]] <- elite[[gen(0)]][!elite[[gen(0)]]@id %in% elite[[gen(1)]]@id]
+			} else if(i > 1) {
+				mostAdvancedTrial <- tail(which(sapply(VDP[trials[-length(trials)]], length) > 0), 1)
+				elSel <- if(i <= traditional) VDP[mostAdvancedTrial] else lapply(VDP, tail, 1)[trials[{traditional + 1}:mostAdvancedTrial]] 
+				elite[[gen(i)]] <- selectInd(mergePopsRec(elSel), nInd = nElite, use = useIn)
+				rm(elSel)
+			}
+			if(nInd(elite[[gen(i)]]) > nFam) elite[[gen(i)]] <- elite[[gen(i)]][sample(nInd(elite[[gen(i)]]), nFam)]
 		}
 
 		if (i <= nYr){ 
@@ -370,9 +378,9 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				}
 				# run GS model to cycle through RGSC for year i
  				if(traditional > 0) {
-					RGSC[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elite = elite, families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
-						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
-						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
+					RGSC[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elite = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
+						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
+						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
 				} else if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {

@@ -42,7 +42,11 @@ formatPop <- function(popL, depth = 1, meanVariety = TRUE, removeErr = TRUE){
     # for(i in 1:length(popL[[1]])) z[i] <- popL[[1]][[i]][["paramL"]][["nFam"]]
     nVar <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {tail(with(x[["paramL"]], nFam * famSize * cumprod(selectTrials)), 1)}, combine = c))))
     cyclePerYr <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["cyclePerYr"]]}, combine = c))))
-    trad <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["traditional"]]}, combine = c))))
+    nTrial <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {length(x[["paramL"]][["selectTrials"]])}, combine = c))))
+    nYr <- unique(round(unlist(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["nYr"]]}, combine = c))))
+    trad <- sapply(rlapply(popL, level = depth, f = function(x) {x[["paramL"]][["traditional"]]}, combine = c), unique)
+
+    if (length(nYr) > 1) stop("number of years dont match!")
 
     simStats <- rlapply(popL, function(x) {x[!names(x) %in% c("SP", "paramL", "VgVDP", "gvVDP", "VDPacc")]}, level = depth)
    
@@ -53,18 +57,23 @@ formatPop <- function(popL, depth = 1, meanVariety = TRUE, removeErr = TRUE){
 
     simAvg <- rlapply(simReps, f = colMeans, level = depth, na.rm = TRUE)
 
-    RGSCyr <- get1(simAvg, "RGSCyr", depth - 1)
+	# RGSCyr <- lapply(rlapply(simReps, f = "[[", level = depth - 1, i = "RGSCyr"), unique)
+    
+    # RGSCyr <- get1(simAvg, "RGSCyr", depth - 1)
     # if(all(trad > 0)) 
-    RGSCgen <- get1(simAvg, "Rcyc", depth - 1)
-    yr <- RGSCyr / cyclePerYr
-    xlims <- range(c(0, RGSCgen))
-    ylims <- range(unlist(rlapply(simReps, getYrange, level = depth - 1))) * 1.1
+    # RGSCgen <- get1(simAvg, "Rcyc", depth - 1)
+    # yr <- RGSCyr / cyclePerYr
+    yr <- 1:nYr
+    # xlims <- range(c(0, RGSCgen))
+    # ylims <- range(unlist(rlapply(simReps, getYrange, level = depth - 1))) * 1.1
 
     if (meanVariety) {
     	simAvg <- rlapply(simAvg, function(x) {x[["vy"]] <- x[["varMean"]]; x[["vx"]] <- x[["RGSCyr"]]; x}, level = depth - 1)
     }
 
 	varL <- rlapply(simAvg, "[[", level = depth - 1, i = "vy")
+	RGSCyr <- rlapply(simAvg, "[[", level = depth - 1, i = "vx")
+	RGSCgen <- rlapply(simAvg, "[[", level = depth - 1, i = "Rcyc")
 	RGSCacc <- rlapply(simAvg, "[[", level = depth - 1, i = "RGSCacc")
 	VDPinAcc <- rlapply(simAvg, "[[", level = depth - 1, i = "VDPinAcc")
 	RGSCoutAcc <- rlapply(simAvg, "[[", level = depth - 1, i = "RGSCoutAcc")
@@ -73,17 +82,52 @@ formatPop <- function(popL, depth = 1, meanVariety = TRUE, removeErr = TRUE){
 	SL <- rlapply(simAvg, "[[", level = depth - 1, i = "sVDP")
 	iL <- rlapply(simAvg, "[[", level = depth - 1, i = "iVDP")
 
-	list(nVar = nVar, cyclePerYr = cyclePerYr, RGSCyr = RGSCyr, RGSCgen = RGSCgen, yr = yr, xlims = xlims, ylims = ylims, VDPinAcc = VDPinAcc, RGSCoutAcc = RGSCoutAcc,
+	list(nVar = nVar, cyclePerYr = cyclePerYr, nTrial = nTrial, nYr = nYr, RGSCyr = RGSCyr, RGSCgen = RGSCgen, yr = yr, 
+		# xlims = xlims, ylims = ylims, 
+		VDPinAcc = VDPinAcc, RGSCoutAcc = RGSCoutAcc,
 		 varL = varL, Vg = Vg, gsL = gsL, RGSCacc = RGSCacc, SL = SL, iL = iL, errors = errs)
+}
+
+plotPopVar <- function(x, y, s, vLine = "none", popcol = "#000000", alpha = "", alphaMean = "0D", ...) {
+	polycol <- paste0(popcol, alphaMean)
+	popcol <- paste0(popcol, alpha)
+	xpoly <- c(x, rev(x), x[1])
+	ypoly <- c(y + s, rev(y - s), y[1] + s[1])
+
+	polygon(x = xpoly, y = ypoly, col = polycol, border = NA)
+	lines(x = x, y = y, type = "l", col = popcol, ...)
 }
 
 parDir <- getwd()
 source(paste0(parDir, "/alphaTools.R"))
 
 
-defArgs <- list(filenames = c('results/traditional/traditional30yr1000QTL_trad2_intWithin1_intAcross1_truth0_vdp20x75.RData', 'results/traditional/traditional30yr1000QTL_trad3_intWithin1_intAcross1_truth0_vdp20x75.RData'),
-figDir = "figures/test", figName = "test.pdf", labels = NULL)
+defArgs <- list(filenames = c('results/traditional/traditional30yr1000QTL_trad2_intWithin0.2_intAcross0.5_truth0_vdp20x75.RData', 
+			  'results/quadprog/quadprog30yr1000QTL_fin0.005_pull3_truth0_rgsc0.2_vdp20x75.RData', 
+			  'results/quadprog/quadprog30yr1000QTL_fin0.005_fout0.1_N1_pull0_truth0_rgsc0.2_vdp20x75.RData',
+			  'results/phenoRGSC/phenoRGSC30yr1000QTL_trunc_phRS0.4_truth0_rgsc0.2_vdp20x75.RData',
+			  'results/phenoRGSC/phenoRGSC30yr1000QTL_quadprog_fin0.005_fout0.1_N1_pull2_phRS0.4_sepTrn0_truth0_rgsc0.2_vdp20x75.RData'),
+    figDir = "figures/branch",
+    figName = "branchFout0.1phenoRGSCfin0.005phRS0.4.pdf",
+    labels = c('trad2', 'quadprog3fin0.005', 'quadprog0fout0.1', 'truncphRS0.4', 'quadprog0fout0.1phRS0.4',
+    cols = c("#000000", "#FF0000"))
+)
+
+defArgs <- list(filenames=c('results/traditional/traditional30yr1000QTL_trad2_intWithin0.2_intAcross0.5_truth0_vdp40x100.RData', 
+'results/quadprog/quadprog30yr1000QTL_fin0.005_pull3_truth0_rgsc0.2_vdp40x100.RData', 
+'results/quadprog/quadprog30yr1000QTL_fin0.005_fout0.1_N1_pull0_truth0_rgsc0.2_vdp40x100.RData',
+'results/phenoRGSC/phenoRGSC30yr1000QTL_trunc_phRS0.4_truth0_rgsc0.2_vdp40x100.RData',
+'results/phenoRGSC/phenoRGSC30yr1000QTL_trunc_phRS0.4_truth0_rgsc0.3_vdp40x100.RData',
+'results/phenoRGSC/phenoRGSC30yr1000QTL_quadprog_fin0.005_fout0.1_N1_pull2_phRS0.4_sepTrn0_truth0_rgsc0.2_vdp40x100.RData') ,
+    figDir="figures/branch" ,
+    figName="branchFout0.1phenoRGSCfin0.005phRS0.4_40x100.pdf" ,
+    labels=c('trad2', 'quadprog3fin0.005', 'quadprog0fout0.1', 'trunc0.2phRS0.4', 'trunc0.3phRS0.4', 'quadprog0fout0.1phRS0.4'),
+    cols = c("#000000", "#FF0000")) 
+
+defArgs <- list(filenames = NULL, figDir = "figures/test", figName = "test.pdf", labels = NULL, cols = c("#000000", "#FF0000"))
 defArgs <- getComArgs(defArgs)
+
+if(is.null(defArgs[["filenames"]])) stop("please provide filenames!")
 
 if(is.null(defArgs[["labels"]])) defArgs[["labels"]] <- 1:length(defArgs[["filenames"]])
 attach(defArgs)
@@ -126,30 +170,75 @@ fi"))
 pdfName <- paste0(figDir, "/", figName) 
 pdf(pdfName, width = 12, height = 7)
 
-ylims <- getYranges(statList$varL)
-plot(statList$RGSCyr, statList$varL[[1]], type = "l", ylim = ylims, xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n")
-axis(1, at = c(0, statList$RGSCyr), labels = c(0, statList$yr))
-for(s in 2:length(filenames)) lines(statList$RGSCyr, statList$varL[[s]], lty = s)
+xvar <- statList$RGSCyr[[which.max(sapply(statList$RGSCyr, max))]]
+ylimsvar <- getYranges(statList$varL)
+xrgsc <- statList$RGSCgen
+gens <- sapply(xrgsc, length)
+xrgsc[gens == min(gens)] <- lapply(xrgsc[gens == min(gens)], function(x) x * max(gens - 1) / min(gens - 1))
+ylimsgs <- getYranges(statList$gsL)
+varShift <- statList$nTrial*statList$cyclePerYr
+nYr <- statList$nYr
+
+# varieties
+plot(xvar, statList$varL[[1]], type = "l", ylim = ylimsvar, xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xvar, statList$varL[[i]], lty = i)
 legend("topleft", legend = labels, lty = 1:length(filenames))
-dev.off()	
 
-# ylims <- getYranges(statList$gsL, select, j, k)
-# plot(statList$RGSCgen, statList$gsL[[select[1]]][[j]][k,], type = "l", ylim = ylims, xlab = "year", ylab = "Recurrent Population Mean", main = "Recurrent Population Mean", xaxt = "n")
-# axis(1, at = c(0, statList$RGSCyr), labels = c(0, statList$yr))
-# for(s in 2:length(select)) lines(statList$RGSCgen, statList$gsL[[select[s]]][[j]][k,], lty = s)
-# legend("topleft", legend = select, lty = 1:length(select))
+# RGSC
+plot(xrgsc[[1]], statList$gsL[[1]], type = "l", ylim = ylimsgs, xlab = "year", ylab = "Recurrent Population Mean", main = "Recurrent Population Mean", xaxt = "n", col = cols[2])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xrgsc[[i]], statList$gsL[[i]], lty = i, col = cols[2])
+legend("topleft", legend = labels, lty = 1:length(filenames))
 
-# ylims <- getYranges(statList$Vg, select, j, k)
-# plot(statList$RGSCgen, statList$Vg[[select[1]]][[j]][k,], type = "l", ylim = ylims, xlab = "year", main = "Recurrent Population Variance", ylab = "Variance", xaxt = "n")
-# axis(1, at = c(0, statList$RGSCyr), labels = c(0, statList$yr))
-# for(s in 2:length(select)) lines(statList$RGSCgen, statList$Vg[[select[s]]][[j]][k,], lty = s)
-# legend("topright", legend = select, lty = 1:length(select))
+# both var & RGSC
+plot(xvar, statList$varL[[1]], type = "l", ylim = range(c(ylimsvar, ylimsgs)), xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xvar, statList$varL[[i]], lty = i)
+legend("topleft", legend = labels, lty = 1:length(filenames))
+for(i in 2:length(filenames)) lines(xrgsc[[i]], statList$gsL[[i]], lty = i, col = cols[2])
 
-# ylims <- c(0, 1)
-# plot(statList$RGSCgen[-length(statList$RGSCgen)], statList$RGSCacc[[select[1]]][[j]][k,], type = "l", ylim = ylims, xlab = "year",  main = "Recurrent Population Prediction Accuracy", ylab = "Prediction Accuracy", xaxt = "n")
-# axis(1, at = c(0, statList$RGSCyr), labels = c(0, statList$yr))
-# for(s in 2:length(select)) lines(statList$RGSCgen[-length(statList$RGSCgen)], statList$RGSCacc[[select[s]]][[j]][k,], lty = s)
-# legend("topright", legend = select, lty = 1:length(select))
+# both var & RGSC, with shift
+plot(xvar + varShift, statList$varL[[1]], type = "l", ylim = range(c(ylimsvar, ylimsgs)), xlim = c(0, max(xvar) + varShift), xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+axis(1, at = c(0:{statList$nYr + statList$nTrial}*statList$cyclePerYr), labels = c(0:{statList$nYr + statList$nTrial}))
+for(i in 2:length(filenames)) lines(xvar + varShift, statList$varL[[i]], lty = i)
+legend("topleft", legend = labels, lty = 1:length(filenames))
+for(i in 1:length(filenames)) lines(xrgsc[[i]], statList$gsL[[i]], lty = i, col = cols[2])
+
+
+# RGSC with var
+plot(NA, type = "l", ylim = ylimsgs, xlim = range(unlist(xrgsc)), xlab = "year", ylab = "Recurrent Population Mean", main = "Recurrent Population Mean", xaxt = "n", col = cols[2])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 1:length(filenames)) plotPopVar(x = xrgsc[[i]], y = statList$gsL[[i]], sqrt(statList$Vg[[i]]), popcol = cols[2], lty = i)
+
+# Varieties and RGSC with variance
+plot(xvar, statList$varL[[1]], type = "l", ylim = range(c(ylimsvar, ylimsgs)), xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xvar, statList$varL[[i]], lty = i)
+legend("topleft", legend = labels, lty = 1:length(filenames))
+for(i in 1:length(filenames)) plotPopVar(x = xrgsc[[i]], y = statList$gsL[[i]], sqrt(statList$Vg[[i]]), popcol = cols[2], lty = i)
+
+
+
+# # VDP intensity
+# plot(xvar + varShift, statList$varL[[1]] - statList$gsL[[1]][-1], type = "l", ylim = range(c(ylimsvar, ylimsgs)), xlim = c(0, max(xvar) + varShift), xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+# axis(1, at = c(0:{statList$nYr + statList$nTrial}*statList$cyclePerYr), labels = c(0:{statList$nYr + statList$nTrial}))
+# for(i in 2:length(filenames)) lines(xvar + varShift, statList$varL[[i]], lty = i)
+# legend("topleft", legend = labels, lty = 1:length(filenames))
+# for(i in 1:length(filenames)) lines(xrgsc[[i]], statList$gsL[[i]], lty = i, col = cols[2])
+
+
+ylims <- getYranges(statList$Vg)
+plot(xrgsc[[1]], statList$Vg[[1]], type = "l", ylim = ylims, xlab = "year", main = "Recurrent Population Variance", ylab = "Variance", xaxt = "n")
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xrgsc[[i]], statList$Vg[[i]], lty = i)
+legend("topright", legend = labels, lty = 1:length(filenames))
+
+ylimsacc <- c(min(c(0, unlist(statList$RGSCacc)), na.rm = TRUE), max(c(1, unlist(statList$RGSCacc)), na.rm = TRUE))
+plot(statList$RGSCgen[[1]][gen(statList$RGSCgen[[1]]) == names(statList$RGSCacc[[1]])], statList$RGSCacc[[1]], type = "l", ylim = ylimsacc, xlim = range(unlist(statList$RGSCgen)), xlab = "year",  main = "Recurrent Population Prediction Accuracy", ylab = "Prediction Accuracy", xaxt = "n")
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(statList$RGSCgen[[i]][gen(statList$RGSCgen[[i]]) %in% names(statList$RGSCacc[[i]])], statList$RGSCacc[[i]], lty = i)
+legend("topright", legend = labels, lty = 1:length(filenames))
 
 # if(k %in% rownames(statList$RGSCoutAcc[[select[1]]][[j]])){
 # 	ylims <- c(0, 1)
@@ -170,3 +259,19 @@ dev.off()
 # }
 
 
+percTrad <- lapply(statList$varL, function(x) x /statList$varL[[1]])
+ylimsperc <- range(unlist(percTrad))
+plot(xvar, percTrad[[1]], type = "l", ylim = ylimsperc, xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+for(i in 2:length(filenames)) lines(xvar, percTrad[[i]], lty = i)
+legend("topright", legend = labels, lty = 1:length(filenames))
+
+dev.off()	
+
+
+# percTrad <- lapply(statList$varL, function(x) x /statList$varL[[1]])
+# ylimsperc <- range(unlist(percTrad))
+# plot(xvar, percTrad[[1]], type = "l", ylim = ylimsperc, xlab = "year", ylab = "Variety Mean", main = "Variety Means", xaxt = "n", col = cols[1])
+# axis(1, at = c(0, xvar), labels = c(0, statList$yr))
+# for(i in 2:length(filenames)) lines(xvar, percTrad[[i]], lty = i)
+# legend("topright", legend = labels, lty = 1:length(filenames))

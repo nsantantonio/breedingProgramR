@@ -118,8 +118,7 @@ tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, be
 	famNum <- sum(repFam)
 		
 	if(famNum == 1) msg(2, "NOTE: Only one family represented!")
-
-		# newpop <- selectCross(pop, nInd = round(nInd(pop) * intWithin), nCrosses = nCrosses)
+	# if(nInd(elite) > nFam) elite <- elite[sample(nInd(elite), nFam)]
 
 	nFamSel <- ceiling(nFam * intAcross)
 	if(famNum < nFamSel) msg(2, "NOTE: insufficient families represented to use specified intAcross. Using individuals from", famNum ,"represented families")

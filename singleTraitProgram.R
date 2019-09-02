@@ -135,7 +135,7 @@ loci <- pullLoci(SP)
 
 if(system("hostname", intern = TRUE) == "Bender") {
 	print("Bender is great!")
-	setMKLthreads(1)
+	if(defArgs$nThreads > 1) setMKLthreads(1)
 	registerDoMC(defArgs$nThreads)
 } else {
 	registerDoMC(defArgs$nThreads)
