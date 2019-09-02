@@ -14,7 +14,7 @@
 
 
 sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
-# k = 1; paramL = defArgs; simParam <- SP; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
+# k = 1; paramL = defArgs; simParam <- SP; acrossInt = 0.5; withinInt = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
 	# parameter checks and warnings.
 	if (checkParam){
 		paramNames <- c("maxIter", "lgen", "useTrue", "traditional", "founderBurnIn", "selectRGSC", "nProgenyPerCrossIn", "nProgenyPerCrossOut", 
@@ -379,8 +379,8 @@ sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity,
 				# run GS model to cycle through RGSC for year i
  				if(traditional > 0) {
 					RGSC[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elite = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
-						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
-						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
+						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
+						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
 				} else if(is.null(selFuncIn)){
 					RGSC[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRGSCi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nNuclear, nProgeny = nProgenyPerCrossIn)
 				} else {

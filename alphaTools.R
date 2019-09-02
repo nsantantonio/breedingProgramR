@@ -107,18 +107,18 @@ getRRh2 <- function(rrFit) { solve(pop0pred@Vu + pop0pred@Ve) %*% pop0pred@Vu }
 
 
 
-# pop <- selPop; nCrosses = nFam; use = "pheno"; intWithin = 0.5; intAcross = 0.5; equalWeight = FALSE; useFamPrior = FALSE; best = FALSE
+# pop <- selPop; elitepop = tail(elite, 1)[[1]]; nCrosses = nFam; use = "pheno"; intWithin = 0.5; intAcross = 0.5; equalWeight = FALSE; useFamPrior = FALSE; best = FALSE
 tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, best = FALSE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
 	if(is.character(use)) use <- match.fun(use)
 
-	if(any(table(elite@id) > 1)) msg(2, "WARNING: some elites repeated!")
+	if(any(table(elitepop@id) > 1)) msg(2, "WARNING: some elites repeated!")
 	if(!all(pop@id %in% unlist(families))) stop("wrong family information... fix me!")
 	famL <- lapply(families, function(x) x[x %in% pop@id])
 	repFam <- sapply(famL, length) > 0
 	famNum <- sum(repFam)
 		
 	if(famNum == 1) msg(2, "NOTE: Only one family represented!")
-	# if(nInd(elite) > nFam) elite <- elite[sample(nInd(elite), nFam)]
+	# if(nInd(elitepop) > nFam) elitepop <- elitepop[sample(nInd(elitepop), nFam)]
 
 	nFamSel <- ceiling(nFam * intAcross)
 	if(famNum < nFamSel) msg(2, "NOTE: insufficient families represented to use specified intAcross. Using individuals from", famNum ,"represented families")
@@ -142,7 +142,7 @@ tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, be
 	parents <- mergePopsRec(parentL)
 	parents <- parents[order(use(parents), decreasing = TRUE)]
 	parNames <- parents@id
-	elNames <- elite@id
+	elNames <- elitepop@id
 	
 	needToAvoidInbreeding <- any(elNames %in% parNames)
 	if(needToAvoidInbreeding) {
@@ -175,7 +175,7 @@ tradSelCross2 <- function(pop, elite, nCrosses, nFam, famSize, families, use, be
 					p2 <- sample(candL[[otherFam]], 1, prob = c(inFamWeights[[otherFam]]))
 				}
 			} else {
-				p2 <- sample(elite@id[nR], 1)
+				p2 <- sample(elitepop@id[nR], 1)
 			}
 		} else {		
 			p2cand <- elNames[notRelated]
