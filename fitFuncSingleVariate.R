@@ -14,7 +14,7 @@
 
 
 sim <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
-# k = 1; paramL = defArgs; simParam <- SP; acrossInt = 0.5; withinInt = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
+# k = 1; paramL = defArgs; simParam <- SP; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
 	# parameter checks and warnings.
 	if (checkParam){
 		paramNames <- c("maxIter", "lgen", "useTrue", "traditional", "founderBurnIn", "selectRGSC", "nProgenyPerCrossIn", "nProgenyPerCrossOut", 

@@ -11,3 +11,5 @@ expectedVarianceOfSelfing.R
 runCBSU.sh
 oldScripts/
 singleTraitProgramTEST.R
+checkResults.R
+resultSummary/

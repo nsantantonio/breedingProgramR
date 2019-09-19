@@ -8,7 +8,7 @@ famSize=(50 75 100)
 
 reps=1
 nFounderPops=100
-nThreads=20
+nThreads=35
 nYr=30
 QTL=1000QTL
 lgen=4
@@ -52,6 +52,31 @@ selectTrials=("c(0.5, 0.2, 0.5, 0.4)" \
 #     done
 # done
 
+
+# use solqp, dont branch....
+for i in {0..2}; do 
+# for i in 2; do 
+   for k in 0.02 0.05 0.001; do
+       for j in 0; do
+           tmpSimName="${projName}${nYr}yr${QTL}_fin${k}_pull3_truth${j}_rgsc0.2_vdp${nFam[$i]}x${famSize[$i]}"
+           args=("nThreads=${nThreads}" \
+               "nYr=${nYr}" \
+               "lgen=$lgen" \
+               "simName=$tmpSimName" \
+               "projName=${projName}" \
+               "reps=${reps}" \
+               "nFounderPops=${nFounderPops}" \
+               "selectRGSC=0.2" \
+               "useTruth=${j}" \
+               "nFam=${nFam[$i]}" \
+               "famSize=${famSize[$i]}"\
+               "selFuncIn=(solqp)" \
+               "fthresh=${k}" \
+               "selectTrials=${selectTrials[$i]}")
+           Rscript $(pwd)/singleTraitProgram.R "${args[@]}" &> $(pwd)/logs/log_${tmpSimName}.txt 
+       done
+   done
+done
 
 # use solqp, dont branch....
 for i in {0..2}; do 
