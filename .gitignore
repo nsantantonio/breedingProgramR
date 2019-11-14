@@ -13,3 +13,5 @@ oldScripts/
 singleTraitProgramTEST.R
 checkResults.R
 resultSummary/
+*.tar.gz
+breedingProgramR/

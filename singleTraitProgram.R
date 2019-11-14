@@ -1,27 +1,23 @@
+# load breedingProgramR
+library(breedingProgramR)
+library(AlphaSimR)
+# library(doMC)
+
 # get parent directory
 parDir <- getwd()
-# get functions
-source(paste0(parDir, "/alphaTools.R"))
-
 # set default arguments
-defArgs <- list(
+userArgs <- list(
 # simulation parameters
-	seed = 12345,
-	nThreads = 30, 
-	projName = "testProj", 
-	simName = "testSim",
-	simFunc = "fitFuncSingleVariate.R", 
 	maxIter = 1000L,
 	reps = 1,
 	nFounderPops = 1,
 	lgen = 4,
-	useTruth = 0, # make this an integer, 1 = use QTL, 2 = use true effects?
-	traditional = FALSE, # this selects out of VDP as parents, no RGSC
+	useTruth = 0, # make this an integer, 1 = use QTL, 2 = use true effects
+	traditional = TRUE, # this selects out of VDP as parents, no RGSC
 # founder parameters
 	founderRData = "founderPop/testAlphaSimR1000SegSite.RData",
 	founderSamples = "founderPop/founderSamples_nInd100_1000SegSite.RData",
 	founderh2 = 0.3,
-	simpleFounder = FALSE,
 	founderBurnIn = 1,
 	founderReps = 1,
 	founderKeep = 4,
@@ -54,7 +50,7 @@ defArgs <- list(
 	updateVg = FALSE,
 	h2 = c(0.3, 0.3, 0.3, 0.3),
 # program parameters
-	nYr = 30,
+	nYr = 10,
 	selectTrials = c(0.5, 0.4, 0.3, 1/3),
 	trialReps = c(1, 2, 3, 3),
 	trialLocs = c(1, 2, 5, 5),
@@ -66,81 +62,51 @@ defArgs <- list(
 	separateTrain = FALSE,
 # chromosome parameters
 	nChrom = 10,
-	nLoci = 100,
+	nLoci = 1000,
 	nM = 100, # floor(c(10*(9:1), 4) / 4),
 	nQTL = 100 # c(2*(9:1), 1),
 )
 
-stdArgNames <- names(defArgs)
-defArgs <- getComArgs(defArgs)
-altArgs <- names(defArgs)[!names(defArgs) %in% stdArgNames] 
-# attach(defArgs)
-
-# load libraries
-library(AlphaSimR)
-library(doMC)
-library(txtplot) 
-
-# source simulation function
-source(defArgs$simFunc)
-
-# print selection sizes
-# nFam * famSize * c(1, cumprod(selectTrials))
-
-if(!is.null(defArgs$projName)) defArgs$projName <- paste0(defArgs$projName, "/")
-# make directory to store all results
-simDir <- paste0(parDir, "/results/", defArgs$projName) 
-system(paste0("simdir=", simDir, "
-if [ ! -d $simdir ]; then
-	mkdir -p $simdir
-else 
-	echo 'Directory already exists! Any results therein will be overwritten without further notice...'
-fi"))
-
-
-# set seed
-if (!is.null(defArgs$seed)) set.seed(defArgs$seed)
-
+if(!interactive()){
+	userArgs <- getComArgs(userArgs)
+}
 
 # create simple founder pop, either simple or from loaded MaCS sim
-if (defArgs$simpleFounder) {
-	founderPop <- quickHaplo(nFounder, nChrom, nLoci, genLen = 1, ploidy = 2L, inbred = FALSE)
-} else {
-	load(defArgs$founderRData)
-	if(!is.null(defArgs$founderSamples)) {
-		load(defArgs$founderSamples)
-		defArgs$founderSamples <- founderSamples
-	}
-	### NOTE, I MOVED THE FOUNDER SAMPLING INSIDE THE SIM FUNCTION SO THAT REPS WOULD BE ACROSS DIFFERENT FOUNDERS. (I.E. NO "FOUNDER" EFFECT)  
-	# if (is.null(founderSamples)) founderPop <- founderPop[sample(1:nInd(founderPop), nFounder)]
-	# sampleFounderPop(founderPop, size = defArgs$nFounder, n = 100)
-}
+founderPop <- quickHaplo(userArgs$nFounder, userArgs$nChrom, userArgs$nLoci, genLen = 1, ploidy = 2L, inbred = FALSE)
 
 # Setting Simulation Parameters
 SP = SimParam$new(founderPop)
 # SP$nThreads <- 40
 
 # add trait 
-SP$addTraitA(nQtlPerChr=defArgs$nQTL, mean = 0, var = defArgs$Vg)
-# SP$addTraitAG(nQtlPerChr=nQTL, mean = 0, var = Vg, varGxE = Vgxe, varE = h2toVe(h2), corGxE = )
+SP$addTraitA(nQtlPerChr=userArgs$nQTL, mean = 0, var = userArgs$Vg)
 
 # add error variance as function of heritability
-SP$setVarE(h2 = defArgs$founderh2)
+SP$setVarE(h2 = userArgs$founderh2)
 
 # add genotype platform
-SP$addSnpChip(defArgs$nM)
+SP$addSnpChip(userArgs$nM)
 
 loci <- pullLoci(SP)
 # Reduce(intersect, loci)
 
+
+trad <- simSingleTraitInbred(k = k, founderPop = founderPop, simParam = SP, paramL = userArgs, returnFunc = getPopStats)
+names(trad)
+
+plot(1:userArgs$nYr, trad$gvVDP$variety, type = "l")
+
+userArgs
+trad <- simSingleTraitInbred(k = k, founderPop = founderPop, simParam = SP, paramL = userArgs, returnFunc = getPopStats)
+
 if(system("hostname", intern = TRUE) == "Bender") {
 	print("Bender is great!")
-	if(defArgs$nThreads > 1) setMKLthreads(1)
-	registerDoMC(defArgs$nThreads)
+	if(userArgs$nThreads > 1) setMKLthreads(1)
+	registerDoMC(userArgs$nThreads)
 } else {
-	registerDoMC(defArgs$nThreads)
+	registerDoMC(userArgs$nThreads)
 }
 
-simrun <- foreach(k = 1:defArgs$nFounderPops) %:% foreach(r = 1:defArgs$reps, .errorhandling='pass') %dopar% do.call(sim, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = defArgs, returnFunc = getPopStats), defArgs[altArgs]))
-msg(0, "saving results in", paste0(simDir, defArgs$simName, ".RData"))
-save(simrun, SP, file = paste0(simDir,  defArgs$simName, ".RData"))
+simrun <- foreach(k = 1:userArgs$nFounderPops) %:% foreach(r = 1:userArgs$reps, .errorhandling='pass') %dopar% do.call(simSingleTraitInbred, c(list(k = k, founderPop = founderPop, simParam = SP, paramL = userArgs, returnFunc = getPopStats), userArgs[altArgs]))
+msg(0, "saving results in", paste0(simDir, userArgs$simName, ".RData"))
+save(simrun, SP, file = paste0(simDir,  userArgs$simName, ".RData"))
