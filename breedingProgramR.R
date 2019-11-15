@@ -29,7 +29,7 @@ argumentChange <- function(defaultArgs, userArgs){
 msg <- function(n, ...) { cat(do.call(paste, c(rep(list("    "), n), ..., collapse = "", sep = " ")), "\n", sep = "") }
 
 
-simSingleTraitInbred <- function(k = 1, founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
+simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = FALSE, GSfunc = NULL, switchGSfunc = 4, ...){
 # k = 1; paramL = userArgs; simParam <- SP; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
 	defArgs <- list(
 		maxIter = 1000L,
