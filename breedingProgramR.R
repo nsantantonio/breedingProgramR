@@ -1431,8 +1431,7 @@ getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
     varMean <- gvVDP[["variety"]]
 	nVariety <- sapply(gvVariety, nrow)
 	Yvariety <- unlist(gvVariety)
-	Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety)
-
+	Xvariety <- rep(Ryr[1:length(nVariety)], times = nVariety) / GScylcePerYr
 
     RCRSacc <- resultL$predAcc[["RCRS"]]
     VDPacc <- resultL$predAcc[["VDP"]]
