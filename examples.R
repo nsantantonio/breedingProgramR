@@ -51,7 +51,7 @@ rapidCycleTruncation <- simSingleTraitInbred(founderPop = founderPop, simParam =
 # make a plot of the variety means and recurrent population mean and sd
 plot(NA, ylim = c(0, max(rapidCycleTruncation$vy)), xlim = c(0, rapidCycleTruncation$paramL$nYr), ylab = "Genetic Value")
 plotPop(rapidCycleTruncation)
-legend("topright")
+legend("bottomright", legend = c("Recurrent population", "Varieties"), pch = c(NA, 1), lty = c(1, NA), col = rep("#000000", 2), bty = "n")
 
 
 # now lets compare that to a traditional program
@@ -67,6 +67,8 @@ traditionalTruncation <- simSingleTraitInbred(founderPop = founderPop, simParam 
 plot(NA, ylim = c(0, max(c(rapidCycleTruncation$vy, traditionalTruncation$vy))), xlim = c(0, rapidCycleTruncation$paramL$nYr), ylab = "Genetic Value")
 plotPop(rapidCycleTruncation)
 plotPop(traditionalTruncation, popcol = "#B22222")
+legend("bottomright", legend = c("Recurrent population", "Varieties"), pch = c(NA, 1), lty = c(1, NA), col = rep("#000000", 2), bty = "n")
+legend("topleft", legend = c("Rapid Cycle Truncation", "Traditional"), pch = 1, lty = 1, col = c("#000000", "#B22222"), bty = "n")
 
 
 # define an arbitrary function for selection in RGSC, this one mates the best to the best and the worst to the worst, should not change mean, but will change variance 
@@ -112,15 +114,18 @@ diverge <- simSingleTraitInbred(founderPop = founderPop, simParam = SP, paramL =
 # plot results
 plot(NA, ylim = range(c(rapidCycleTruncation$vy, traditionalTruncation$vy, diverge$vy)), xlim = c(0, rapidCycleTruncation$paramL$nYr), ylab = "Genetic Value")
 plotPop(rapidCycleTruncation)
-plotPop(traditionalTruncation, popcol = "#2222B2")
-plotPop(diverge, popcol = "#B22222")
+plotPop(traditionalTruncation, popcol = "#B22222")
+plotPop(diverge, popcol = "#2222B2")
+legend("bottomleft", legend = c("Recurrent population", "Varieties"), pch = c(NA, 1), lty = c(1, NA), col = rep("#000000", 2), bty = "n")
+legend("topleft", legend = c("Rapid Cycle Truncation", "Traditional", "Divergent Selection"), pch = 1, lty = 1, col = c("#000000", "#B22222", "#2222B2"), bty = "n")
+
 
 
 # Lets try something more complicated. Here we use optimal contribution to select within the recurrent population, and branch out every year to push means. This may take some time to run. 
 userArgsOCB <- userArgs
-userArgsOCB$selFuncIn <- solqp # functions to select based on 
-userArgsOCB$selFuncOut <- solqpOut
-userArgsOCB$pullCycle <- 0
+userArgsOCB$selFuncIn <- solqp # function to select based on optimal contribution within RCRS
+userArgsOCB$selFuncOut <- solqpOut # function to branch and select based on optimal contribution out of RCRS
+userArgsOCB$pullCycle <- 0 # cycle to branch material out at minimum is 0 (i.e. at the beginning of each year) up to the number of cycles per year (which doesnt branch anymore).  
 userArgsOCB$phenoRCRS <- 0.5
 
 # note that arguments to selFuncIn and selFuncOut are provided directly to simSingleTraitInbred(), and are passed to the right functions within.
@@ -131,3 +136,6 @@ plot(NA, ylim = c(0, max(c(rapidCycleTruncation$vy, traditionalTruncation$vy, op
 plotPop(rapidCycleTruncation)
 plotPop(traditionalTruncation, popcol = "#B22222")
 plotPop(optimalContributionWithBranching, popcol = "#22B222")
+legend("bottomright", legend = c("Recurrent population", "Varieties"), pch = c(NA, 1), lty = c(1, NA), col = rep("#000000", 2), bty = "n")
+legend("topleft", legend = c("Rapid Cycle Truncation", "Traditional", "Optimal Contribution Branching"), pch = 1, lty = 1, col = c("#000000", "#B22222", "#22B222"), bty = "n")
+
