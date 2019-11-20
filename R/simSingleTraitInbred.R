@@ -116,6 +116,8 @@
 #' @export
 simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = TRUE, GSfunc = NULL, switchGSfunc = 4, k = 1, ...){
 # k = 1; paramL = userArgs; simParam <- SP; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
+	
+	#default parameters for the breeding program. Any of these that are supplied in the list given to the paramL argument will be changed accordingly.
 	defArgs <- list(
 		maxIter = 1000L,
 		lgen = 4L,
@@ -150,14 +152,14 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		famSize = 50,
 		ssd = FALSE,
 		selF2 = FALSE,
-		nF2 = 1,
+		nF2 = 1L,
 		Vg = 1,
 		updateVg = FALSE,
 		h2 = c(0.3, 0.3, 0.3, 0.3),
-		nYr = 30,
+		nYr = 30L,
 		selectTrials = c(0.5, 0.2, 0.5, 0.4),
-		trialReps = c(1, 2, 3, 3),
-		trialLocs = c(1, 2, 5, 5),
+		trialReps = c(1L, 2L, 3L, 3L),
+		trialLocs = c(1L, 2L, 5L, 5L),
 		cyclePerYr = 3,
 		returnVDPtoRCRS = c(0, 0, 0, 0, 0), 
 		nGenOut = NULL,
@@ -165,8 +167,11 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		phenoRCRS = 0,
 		separateTrain = FALSE
 	)
-	paramL <- argumentChange(defArgs, paramL)
 
+	# replace default arguments with user supplied arguments in paramL
+	paramL <- argumentChange(defArgs, paramL) 
+
+	# this will check to see if all parameters are present or if there are additional unrecognized arguments added to paramL
 	if (checkParam){
 		paramNames <- c("maxIter", "lgen", "useTruth", "traditional", "intAcross", "intWithin", "founderSamples", "founderh2", "founderBurnIn", 
 						"founderReps", "founderKeep", "selectRCRS", "pullCycle", "nProgenyPerCrossIn", "nProgenyPerCrossOut", "useIn", "useOut", 
@@ -175,19 +180,30 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 						"trialLocs", "cyclePerYr", "returnVDPtoRCRS", "nGenOut", "nGenInbr", "phenoRCRS", "separateTrain")
 		xtraParams <- names(paramL)[!names(paramL) %in% paramNames]
 		if (length(xtraParams)) {
+			# print unrecognized parameters
+			# should change to warning?
 			cat("Unrecognized parameters have been provided to the 'paramL' argument. If these were meant to be passed to user defined functions, please provide them directly to simSingleTraitInbred().The following will be ignored:\n", paste(xtraParams, collapse = ", "), "\n")
 		}
+		# could remove below, shouldnt happen as all parameters are specified by defaults
 		if (!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
 	}
 	
+	# assign all default parameters as objects (to current env, should be ok). Probably need to change this if we submit to CRAN
 	for (p in names(paramL)) assign(p, paramL[[p]])
+
+	# allow intensity to be given as integer here
+
+	# message for traditional program only about intensities across and within families
 	if(traditional > 0) msg(1, "Intensity across families:", intAcross, "Intensity within family:", intWithin)
 	
+	# warning messages for improper selection function specification
 	selFuncStop <- c(" is a list, but of the wrong structure. Please provide either a single function, a list of functions for for each year, each cycle, or a nested list of length 'nYr' with each element of length 'cyclePerYr'")
 	if(phenoRCRS < 0 | phenoRCRS > 1) stop("'phenoRCRS' must be between 0 and 1 representing the proportion of the first VDP trial dedicated to phenotyping the RCRS!")
 
+	# Allow selection function within the recurrent population to change through time. Populates a list with the function that will be used at each round of selection within year and across years. 
+	# Typically a single funciton is provided, but user can provide a list of length nYr or cyclePerYr or cyclePerYr(nYr). Produces a nest list of length nYr, cyclePerYr(nYr) 
 	if(is.list(selFuncIn)) {
-		if (length(selFuncIn) %in% c(cyclePerYr, nYr, cyclePerYr * nYr)) {
+		if (length(selFuncIn) %in% c(cyclePerYr, nYr, cyclePerYr * nYr)) { # can provide nested list? needs tested 
 			if(all(sapply(selFuncIn, class) == "list")){
 				if (!all(unique(sapply(selFuncIn, length)) == cyclePerYr)) stop(paste0("selFuncIn", selFuncStop))
 			}
@@ -201,55 +217,68 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 			if(class(selFuncIn) == "function") selFuncIn <- rep(list(rep(list(selFuncIn), cyclePerYr)), nYr) else stop(paste0("selFuncIn", selFuncStop))
 		}
 	}
-
+	# similar to selFuncIn, only selFuncOut and inbreedFunc only used once per year. Produces list of length nYr 
 	if(is.function(selFuncOut)) selFuncOut <- rep(list(selFuncOut), nYr) else if(is.list(selFuncOut)) {if (length(selFuncOut) != nYr) stop(paste0("selFuncOut", funcListStop))}
 	if(is.function(inbreedFunc)) inbreedFunc <- rep(list(inbreedFunc), nYr) else if(is.list(inbreedFunc)) {if (length(inbreedFunc) != nYr) stop(paste0("inbreedFunc", funcListStop))}
 
+	# allow intensity to change if the length of selectRCRS > 1. can provide either intesities or number of individuals
 	if(!(length(selectRCRS) == 1 | length(selectRCRS) == nYr)) stop("'selectRCRS' must be of length 1 or nYr!")
 	if(all(selectRCRS <= 1)) {
 		selectRCRS <- nRCRS * selectRCRS
 		if(selectRCRS %% 1 != 0) selectRCRS <- round(selectRCRS)
+		# should allow selectRCRS to change within year? Make nested list like selfFuncIn
 		deltaRCRS <- if(length(selectRCRS) == nYr) TRUE else FALSE
 	}
 
+	# subsample founder pop if nFounder < size of founder pop, user can provide vector of indices, or a list of vectors of indices and define the list index to use, with 'k' argument
 	if(nFounder < nInd(founderPop)) {
 		subFounder <-  if (is.null(founderSamples)) sample(1:nInd(founderPop), nFounder) else if(is.list(founderSamples)) founderSamples[[k]] else founderSamples
 		founderPop <- founderPop[subFounder]
 	}
 
+	# selF2 argument might be deprecated, perhaps remove, and allow user to do f2 selection within selection functions
+	# if (selF2 & cyclePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'cyclePerYr' to 1")
 
-	if (selF2 & cyclePerYr > 1) warning("Selection on F2 is being performed, and there is more than 1 GS cycle per year. You may want to reduce 'cyclePerYr' to 1")
-
+	# checking that selectTrials returnVDPtoRCRS are valid
 	if (!all(selectTrials > 0) | (any(selectTrials < 1) & any(selectTrials > 1))) stop("'selectTrials' must have elements between 0 and 1 or positive integers > 0")
 	if (!all(returnVDPtoRCRS >= 0) | (any(returnVDPtoRCRS < 1) & any(returnVDPtoRCRS > 1))) stop("'returnVDPtoRCRS' must have elements between 0 and 1 or positive integers")
 
+	# total number of lines per year entering the VDP
 	nI <- nFam * famSize
+	# check if all selections are 1. If all >= 1, then assume numbers o of lines, if all <= 1 then assume intensities 
 	if (all(selectTrials <= 1) & !all(selectTrials == 1)) selectTrials <- nI * cumprod(selectTrials) # note this does not allow all to be exactly 1
-
+	# if selection intensities produce remainders, then round
 	if (any(selectTrials %% 1 != 0)){
 		selectTrials <- round(selectTrials)
 		actInt <- selectTrials / c(nI, selectTrials[-length(selectTrials)])
 		msg(0, "NOTE: Selection intensities have been rounded to the nearest integer:\n", selectTrials, "\nThese correspond to selection intensities of:\n", actInt)
 	}
+	# checking returnToRCRS values, if intensities make integers
 	if(length(returnVDPtoRCRS) != length(selectTrials) + 1) stop("returnVDPtoRCRS must be of length(selectTrials) + 1 (for variety)!")
 	if (all(returnVDPtoRCRS <= 1)) returnVDPtoRCRS <- returnVDPtoRCRS * c(nI, selectTrials) 
-
+	# if within family intensity is < 1, get number of ind.
 	if (withinFamInt > 1) withinFamInt <- famSize / ((nI + withinFamInt) / nFam)
 
+	# get number of trials, and name them 
 	nTrial <- length(selectTrials)
 	trials <- c(paste0("trial", 1:nTrial), "variety")
+	# turn selFuncVDP into list of length nYr if not already. Note, this is not built to select differently across different trials, but could be adapted to do so
 	if(is.function(selFuncVDP)) selFuncVDP <- rep(list(selFuncVDP), nYr + nTrial - 1) else if(is.list(selFuncVDP)) {if (length(selFuncVDP) != nYr + nTrial - 1) stop(paste0("selFuncVDP", funcListStop))}
+	# define skipped trials, this functionality needs to tested. Need to check that ebvs from skipped trials are not used in prediction model
 	if (!is.null(skip)) skip <- trials[skip]
 
+	# set cyclePerYr = 1 if traditional
 	if(traditional > 0) {
 		paramL$cyclePerYr <- cyclePerYr <- 1
 	}
+	# set truth variables, if useTruth = 1, use QTL, if truth = 2, use QTL and true breeding (i.e. qtl) values 
+	# Need to  check that if useTruth == 2, then no model fit for time savings. I dont know if this happens 
 	if(useTruth > 0) {
 		msg(0, "NOTICE: using QTL as markers.")
 		useTrue <- TRUE
 	}
 	if(useTruth > 1){
-		msg(0, "NOTICE: using true marker/breeding values for all selection methods.")
+		msg(0, "NOTICE: using true QTL effects/breeding values for all selection methods.")
 		useOut <- "bv"
 		useIn <- "bv"
 		useInbreed <- "bv"
@@ -261,6 +290,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		ebv <- bv
 		Gvar <- varA
 	} else {
+		# allow user to define gen0use?
 		gen0use <- "pheno"
 		estIntFunc <- pheno
 		useGS <- "pheno"
@@ -270,13 +300,15 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 	}
 
 	# define cycles
-	if(is.null(pullCycle)) pullCycle <- cyclePerYr
 	cycle <- 1:cyclePerYr
+	# cycle from which to pull out material for inbreeding, smaller is earlier 
+	if(is.null(pullCycle)) pullCycle <- cyclePerYr
 
-	# ignore GS models if only phenotypes used. 
-	noGS <- if(useIn == "pheno" & useOut == "pheno" & withinFamInt == 1) TRUE else FALSE 
-	if(noGS) msg(1, "noGS is true!")
-	# initialize lists to store populations
+	# dont fit GS models if only phenotypes used
+	noGS <- if(useIn == "pheno" & useOut == "pheno" & useVDP == "pheno" & withinFamInt == 1) TRUE else FALSE 
+	if(noGS) msg(1, "No genomic prediciton is being done!")
+
+	# initialize lists to store populations / accuracies and realized intensities
 	RCRS <- list()
 	if(phenoRCRS > 0){
 		RCRStoVDP <- list()
@@ -291,7 +323,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 	if(traditional > 0) elite <- list() else elite <- NULL
 	if(SP$isTrackPed) ped <- list()
 
-	# initialize nuclear population, train GS model (necessary?), predict ebv (note the ebv's should be bad if markers are not exactly on QTL) 
+	# initialize recurrent population 
 	RCRS[[gen(0)]] <- newPop(founderPop)
 	if(verbose) msg(1, "Founder population has genetic variance of:", popVar(getTrueBV(RCRS[[gen(0)]], simParam = simParam)))
 	
@@ -307,29 +339,28 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 	# phenotype founders
 	RCRS[[gen(0)]] <- setPheno(RCRS[[gen(0)]], varE = h2toVe(founderh2, Vg), reps = founderReps)
 
+	# fit GS model and set EBV after phenotyping
 	if(!noGS){	
 		# train GS model and set EBV (after selfing if ssd)
-		if (selF2) RCRS[[gen(0)]] <- self(RCRS[[gen(0)]], nProgeny = nF2, simParam = simParam)
+		if (ssd) RCRS[[gen(0)]] <- self(RCRS[[gen(0)]], nProgeny = nF2, simParam = simParam)
 		GSmodel[[gen(0)]] <- RRBLUP(RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue)
 		# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue, maxIter = 1000L, ...))
 		RCRS[[gen(0)]] <- setEBV(RCRS[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
 		predAcc[["RCRS"]][[gen(0)]] <- getAcc(pop = RCRS[[gen(0)]], simParam = simParam)		
 	}
 	
+	# calculate expected selection intensity assuming all best lines are advanced
 	xInt <- if(is.null(setXint)) 1 - selectTrials[nTrial] / selectTrials[1] else setXint 
 	if(verbose) msg(0, "Estimated selection intensity:", round(qnorm(xInt, sd = sqrt(Vg)), 3))
 
-	# txtdensity(initSNPAlFreq)
-	# pop <- RCRS[[gen(0)]]; GSfit <- GSmodel[[gen(0)]]
-	# pop <- RCRS[[lastRCRSgen]]; GSfit <- GSmodel[[lastGSmodel]]
-
+	# initilize generation for getting lines out of RCRS and which model to use for prediction
 	pullRCRSgen <- gen(0)
 	pullGSmodel <- gen(0)
 
+	# for traditional program, keep population of elite lines (best so far) of size nFam. 
 	if(!exists("nElite")) nElite <- nFam 
 	if(traditional > 0) elite[[gen(0)]] <- selectInd(RCRS[[gen(0)]], nInd = min(nInd(RCRS[[gen(0)]]), nElite), use = useIn)
-	# sapply(RCRS, function(x){mean(gv(x))})
-	# rlapply(VDP, function(x){mean(gv(x))}, level = 2, combine = c)
+	
 	# run program for nYr years
 	for (i in 1:(nYr + nTrial - 1)) { 
 	# for (i in 1:5) { 
