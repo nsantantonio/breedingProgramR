@@ -1,17 +1,4 @@
 # ignore testing directory
-founderPop/
-results/
-oldResults/
-figures/
-oldFigures/
-logs/
-# run*
-test*
-expectedVarianceOfSelfing.R
-runCBSU.sh
-oldScripts/
-singleTraitProgramTEST.R
-checkResults.R
-resultSummary/
 *.tar.gz
 # breedingProgramR/
+breedingProgramR.R
