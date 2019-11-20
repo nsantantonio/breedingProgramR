@@ -27,6 +27,9 @@ SP$setVarE(h2 = founderh2)
 # add genotype platform
 SP$addSnpChip(nM)
 
+loci <- pullLoci(SP)
+Reduce(intersect, loci)
+
 # set user arguments, as a list that is provided to the paramL argument for simSingleTraitInbred()
  # note: there are a lot more options! see ?simSingleTraitInbred 
 userArgs <- list(
@@ -37,11 +40,11 @@ userArgs <- list(
 	famSize = 50, # number of lines per family
 # genetic parameters
 	Vg = 1, # genetics variance
-	h2 = c(0.3, 0.3, 0.3, 0.3), # heritability within each trial
+	h2 = c(0.3, 0.3, 0.3, 0.5), # heritability within each trial
 # program parameters
 	nYr = 30, # number of years
 	selectTrials = c(0.5, 0.2, 0.5, 0.4), # selection intensity within each trial, note you can also provide a positive integer to indicate the number of lines at each stage
-	trialLocs = c(1, 2, 5, 5), # number of locations
+	trialLocs = c(1, 2, 3, 5), # number of locations
 	trialReps = c(1, 2, 3, 3) # number of reps per trial location
 )
 
@@ -77,7 +80,6 @@ varianceGenerator <- function(pop, GSfit, simParam, bidirIntensity = 0.2, use = 
 	if(is.character(use)) use <- match.fun(use) # make use a function if provided a character
 	pop <- setEBV(pop, GSfit, simParam = simParam) # set ebv with provided model fit, not this doesnt necessarily need to be done
 	gebv <- c(use(pop))
-	# gebv <- rnorm(200)
 	n <- nInd(pop)
 	int <- bidirIntensity / 2
 
