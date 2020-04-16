@@ -478,7 +478,6 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 					msg(0, "NOTICE: Selection intensities within familiy have been rounded to the nearest integer resulting in", nSelToTrial, "progeny per family selected from", nProg, "progeny per family")
 				}
 
-				# HERE IT IS!? for some reason mean(pheno(makeDH(selToP, nDH = nProgPerFam))) << mean(pheno(selToP))
 				VDP[[trials[1]]][[gen(i)]] <- if (ssd) self(selToP, nProgeny = nProgPerFam) else makeDH(selToP, nDH = nProgPerFam)
 				
 				msg(1, "DH parent mean:", round(mean(pheno(selToP)), 6), "DH mean:", round(mean(pheno(VDP[[trials[1]]][[gen(i)]])), 6))

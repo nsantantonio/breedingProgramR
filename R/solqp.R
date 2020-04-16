@@ -24,7 +24,7 @@
 solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = NULL, gain = NULL, truncqp = NULL, allowSelf = FALSE, weightLoci = FALSE, pullGeno = pullSnpGeno, verbose = FALSE, nProgeny = 1, maxProp = 1, ...){
 	suppressMessages(require(LowRankQP))
 	inbreedingCoef <- function(cee, Kmat) 1/2 * crossprod(cee, Kmat) %*% cee
-	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs )
+	expectedGain <- function(cee, gebvs) crossprod(cee, gebvs)
 	betterSample <- function(x, ...) x[sample(length(x), ...)]
 	if(is.character(use)) use <- match.fun(use)
 
@@ -51,7 +51,7 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 		log <- list()
 		cee <- list()
 		for(k in 1:length(lambda)){
-			H <- 2 * lambda[k] * K # the one half is included in the optimization. So where does the 2 come from? Should be 1?
+			H <- 2 * lambda[k] * K # the one half is included in the optimization. 
 			d <- if(is.null(gain)) -(1 - lambda[k]) * gebvs else rep(0, length(gebvs))
 			if(!is.null(gain)) {
 				b <- c(1, gain)
