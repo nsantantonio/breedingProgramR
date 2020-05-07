@@ -8,6 +8,8 @@
 #' @examples none
 #' @export
 invertList <-  function(ll) {
+	allIsNull <- function(x) all(sapply(x, is.null))
+	if(allIsNull(ll)) return(NULL)
     nms <- unique(unlist(lapply(ll, function(X) names(X))))
     ll <- lapply(ll, function(X) setNames(X[nms], nms))
     ll <- apply(do.call(rbind, ll), 2, as.list)
