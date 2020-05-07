@@ -9,9 +9,9 @@
 #' @details [fill in details here]
 #' @examples none
 #' @export
-getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
-    VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2)
-    RCRSparam <- lapply(resultL[["RCRS"]], genParam)
+getPopStats <- function(resultL, simParam, meanVariety = TRUE, verbose = FALSE){
+    VDPparam <- rlapply(resultL[["VDP"]], f = genParam, level = 2, simParam = simParam)
+    RCRSparam <- lapply(resultL[["RCRS"]], genParam, simParam = simParam)
 
     nYr <- length(resultL[["VDP"]][[1]])
     GScylcePerYr <- (length(resultL[["RCRS"]]) - 1) / nYr 
@@ -51,9 +51,11 @@ getPopStats <- function(resultL, meanVariety = TRUE, verbose = FALSE){
 	
 	nVar = unique(nVariety)
 
-    return(list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, varMean = varMean, sdRCRS = SDgRCRS, 
+    rL <- list(SP = resultL$SP, paramL = resultL$paramL, Rcyc = Rcyc, varMean = varMean, sdRCRS = SDgRCRS, 
 				VgRCRS = VgRCRS, VgVDP = VgVDP, gvRCRS = gvRCRS, gvVDP = gvVDP,
     			sRCRS = sRCRS, iRCRS = iRCRS, sVDP = sVDP, iVDP = iVDP, sTotal = sTotal, iTotal = iTotal, 
     			nVar = nVar, vx = Xvariety, vy = Yvariety, RCRSyr = Ryr, RCRSacc = RCRSacc, VDPacc = VDPacc,
-    			RCRSoutAcc = RCRSoutAcc, VDPinAcc = VDPinAcc, theorMax = theorMax))
+    			RCRSoutAcc = RCRSoutAcc, VDPinAcc = VDPinAcc, theorMax = theorMax)
+    if(length(resultL[["extra"]])) rL <- c(rL, resultL["extra"])
+    return(rL)
 }

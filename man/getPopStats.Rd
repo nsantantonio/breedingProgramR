@@ -4,7 +4,7 @@
 \alias{getPopStats}
 \title{getPopStats function}
 \usage{
-getPopStats(resultL, meanVariety = TRUE, verbose = FALSE)
+getPopStats(resultL, simParam, meanVariety = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{resultL}{[value]}
