@@ -5,7 +5,7 @@
 \title{estIntensity function}
 \usage{
 estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety",
-  estFunc = pheno, Gvar = estVg)
+  estFunc = pheno, Gvar = estVg, simParam = NULL)
 }
 \arguments{
 \item{VDP}{[value]}

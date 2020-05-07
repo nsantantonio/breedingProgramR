@@ -4,7 +4,7 @@
 \alias{estVg}
 \title{estVg function}
 \usage{
-estVg(pop, GSfit = NULL, GSfunc = RRBLUP)
+estVg(pop, GSfit = NULL, GSfunc = RRBLUP, simParam = NULL)
 }
 \arguments{
 \item{pop}{[value]}

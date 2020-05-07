@@ -4,7 +4,7 @@
 \alias{getAF}
 \title{getAF function}
 \usage{
-getAF(pop, pullGeno = pullSnpGeno)
+getAF(pop, pullGeno = pullSnpGeno, simParam = NULL)
 }
 \arguments{
 \item{pop}{[value]}

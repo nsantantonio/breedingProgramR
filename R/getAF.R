@@ -8,4 +8,4 @@
 #' @details [fill in details here]
 #' @examples none
 #' @export
-getAF <- function(pop, pullGeno = pullSnpGeno) { colMeans(pullGeno(pop)) / 2 }
+getAF <- function(pop, pullGeno = pullSnpGeno, simParam = NULL) { colMeans(pullGeno(pop, simParam = simParam)) / 2 }

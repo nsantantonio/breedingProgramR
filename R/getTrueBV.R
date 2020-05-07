@@ -10,7 +10,7 @@
 #' @examples none
 #' @export
 getTrueBV <- function(pop, simParam, trait = 1) {
-	M <- pullQtlGeno(pop)	
+	M <- pullQtlGeno(pop, simParam = simParam)	
 	u <- getTrueQTLeff(simParam)
 	M %*% u
 } 
