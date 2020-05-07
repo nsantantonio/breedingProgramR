@@ -4,18 +4,16 @@
 \alias{simSingleTraitInbred}
 \title{simSingleTraitInbred function}
 \usage{
-simSingleTraitInbred(founderPop, paramL, simParam = SP,
-  returnFunc = identity, verbose = TRUE, checkParam = TRUE,
-  GSfunc = NULL, switchGSfunc = 4, k = 1, ...)
+simSingleTraitInbred(paramL, returnFunc = identity, k = 1,
+  verbose = TRUE, checkParam = TRUE, GSfunc = NULL,
+  switchGSfunc = 4, ...)
 }
 \arguments{
-\item{founderPop}{and object of Pop-class}
-
 \item{paramL}{parameter list. See details for parameter values.}
 
-\item{simParam}{an object of an object of SimParam. Default is current global-env SP (see AlphaSimR manual for details)}
-
 \item{returnFunc}{function, typically used to extract summary statistics from breeding program populations. Default is identity, which returns a list of populations in RCRS and VDP.}
+
+\item{k}{integer. Index of paramL$founderSamples to be used. Only used when paramL$founderSamples is a listof length > 1.}
 
 \item{verbose}{logical. Should information abou the breeding population be printed to stdout? Default is TRUE}
 
@@ -25,7 +23,9 @@ simSingleTraitInbred(founderPop, paramL, simParam = SP,
 
 \item{switchGSfunc}{integer. Used to determine when to switch from RRBLUP to RRBLUP2 when the number of individuals exceeds number of markers * switchGSfunc. Default is 4.}
 
-\item{k}{integer. Index of paramL$founderSamples to be used. Only used when paramL$founderSamples is a listof length > 1.}
+\item{founderPop}{and object of Pop-class}
+
+\item{simParam}{an object of an object of SimParam. Default is current global-env SP (see AlphaSimR manual for details)}
 }
 \value{
 [value]
@@ -63,6 +63,8 @@ founderKeep = 4L, # integer. Number of generations to include founder population
 selectRCRS = 0.3, # numeric. selection intensity within recurrent population, only used for truncation selection. Valid between 0 and 1.  
 
 pullCycle = NULL,  # integer. Cycle (within generation) at which to branch material from RCRS, valid between 0 and cyclePerYr, where lower integers branch earlier.
+
+startSelFuncOutYr = 1,  # integer. Year in which standard SelFuncOut should begin. This allows the user to apply SelFuncOut at a later year, allowing standard phenotypic/ebv trunction selection for years prior. 
 
 nProgenyPerCrossIn = 1L, # Number of progeny per cross within RCRS (check this!)
 

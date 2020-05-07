@@ -43,6 +43,8 @@
 #'
 #' pullCycle = NULL,  # integer. Cycle (within generation) at which to branch material from RCRS, valid between 0 and cyclePerYr, where lower integers branch earlier.
 #'
+#' startSelFuncOutYr = 1,  # integer. Year in which standard SelFuncOut should begin. This allows the user to apply SelFuncOut at a later year, allowing standard phenotypic/ebv trunction selection for years prior. 
+#'
 #' nProgenyPerCrossIn = 1L, # Number of progeny per cross within RCRS (check this!)
 #'
 #' nProgenyPerCrossOut = 1L, # Number of progeny per cross of material exiting RCRS for VDP
@@ -114,8 +116,8 @@
 #')
 #' @examples none
 #' @export
-simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc = identity, verbose = TRUE, checkParam = TRUE, GSfunc = NULL, switchGSfunc = 4, k = 1, ...){
-# k = 1; paramL = userArgs; simParam <- SP; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats
+simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose = TRUE, checkParam = TRUE, GSfunc = NULL, switchGSfunc = 4, ...){
+# k = 2; paramL = userArgs; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats; verbose = TRUE
 	
 	#default parameters for the breeding program. Any of these that are supplied in the list given to the paramL argument will be changed accordingly.
 	defArgs <- list(
@@ -125,6 +127,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		traditional = FALSE, 
 		intAcross = 1,
 		intWithin = 0.2,
+		founderPop = NULL,
 		founderSamples = NULL,
 		founderh2 = 0.3,
 		founderBurnIn = 1L,
@@ -132,6 +135,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		founderKeep = 4L,
 		selectRCRS = 0.3,
 		pullCycle = NULL, 
+		startSelFuncOutYr = 1, 
 		nProgenyPerCrossIn = 1L,
 		nProgenyPerCrossOut = 1L,
 		useIn = "ebv", 
@@ -165,19 +169,33 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		nGenOut = NULL,
 		nGenInbr = NULL,
 		phenoRCRS = 0,
-		separateTrain = FALSE
+		separateTrain = FALSE,
+		verbose = FALSE
 	)
 
+	
+	paramL <- c(paramL, list(...)[names(list(...)) %in% defArgs]) 
 	# replace default arguments with user supplied arguments in paramL
 	paramL <- argumentChange(defArgs, paramL) 
 
+	if(!is.null(paramL$seed)) set.seed(paramL$seed + k)
+
+	# print(paste0("file is : ", paramL$founderPop[k]))
+
+	# load(paramL$founderPop[k])
+
+	# print(founderPop)
+
+
+	# add additional parameters back in from (...)
+
 	# this will check to see if all parameters are present or if there are additional unrecognized arguments added to paramL
 	if (checkParam){
-		paramNames <- c("maxIter", "lgen", "useTruth", "traditional", "intAcross", "intWithin", "founderSamples", "founderh2", "founderBurnIn", 
-						"founderReps", "founderKeep", "selectRCRS", "pullCycle", "nProgenyPerCrossIn", "nProgenyPerCrossOut", "useIn", "useOut", 
-						"useInbreed", "useVDP", "returnVDPcrit", "selFuncOut", "selFuncIn", "selFuncVDP", "inbreedFunc", "withinFamInt", "setXint",
+		paramNames <- c("maxIter", "lgen", "useTruth", "traditional", "intAcross", "intWithin", "founderPop", "founderSamples", "founderh2", "founderBurnIn", 
+						"founderReps", "founderKeep", "selectRCRS", "pullCycle", "startSelFuncOutYr", "nProgenyPerCrossIn", "nProgenyPerCrossOut", "useIn", 
+						"useOut", "useInbreed", "useVDP", "returnVDPcrit", "selFuncOut", "selFuncIn", "selFuncVDP", "inbreedFunc", "withinFamInt", "setXint", 
 						"skip", "nFounder", "nRCRS", "nFam", "famSize", "ssd", "selF2", "nF2", "Vg", "updateVg", "h2", "nYr", "selectTrials", "trialReps", 
-						"trialLocs", "cyclePerYr", "returnVDPtoRCRS", "nGenOut", "nGenInbr", "phenoRCRS", "separateTrain")
+						"trialLocs", "cyclePerYr", "returnVDPtoRCRS", "nGenOut", "nGenInbr", "phenoRCRS", "separateTrain", "verbose")
 		xtraParams <- names(paramL)[!names(paramL) %in% paramNames]
 		if (length(xtraParams)) {
 			# print unrecognized parameters
@@ -185,11 +203,24 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 			cat("Unrecognized parameters have been provided to the 'paramL' argument. If these were meant to be passed to user defined functions, please provide them directly to simSingleTraitInbred().The following will be ignored:\n", paste(xtraParams, collapse = ", "), "\n")
 		}
 		# could remove below, shouldnt happen as all parameters are specified by defaults
+		print(paramNames[paramNames %in% names(paramL)])
 		if (!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
+		
 	}
 	
 	# assign all default parameters as objects (to current env, should be ok). Probably need to change this if we submit to CRAN
 	for (p in names(paramL)) assign(p, paramL[[p]])
+
+	# load population if not already given
+	founderPopClass <- class(founderPop)
+	if((founderPopClass == "Pop" | length(founderPop) == 1) & k > 1) {
+		warning("k is greater than 1, but only one founder population specified. Setting k to 1 and continuing...")
+		k <- 1
+	}
+	if(founderPopClass != "Pop" & is.character(founderPopClass)) load(founderPop[k])
+
+	# if (!"SP" %in% ls(envir = .GlobalEnv)) assign("SP", SP, envir = .GlobalEnv)
+	
 
 	# allow intensity to be given as integer here
 
@@ -322,31 +353,33 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 	VDP <- lapply(trials, function(x) list())
 	if(traditional > 0) elite <- list() else elite <- NULL
 	if(SP$isTrackPed) ped <- list()
+	extra <- list()
 
 	# initialize recurrent population 
-	RCRS[[gen(0)]] <- newPop(founderPop)
-	if(verbose) msg(1, "Founder population has genetic variance of:", popVar(getTrueBV(RCRS[[gen(0)]], simParam = simParam)))
+	RCRS[[gen(0)]] <- newPop(founderPop, simParam = SP)
+	if(verbose) msg(1, "Founder population has genetic variance of:", popVar(getTrueBV(RCRS[[gen(0)]], simParam = SP)))
 	
 	# burn in using random crosses
 	printBurnin <- TRUE
 	while (nFam > nInd(RCRS[[gen(0)]]) | founderBurnIn > 0) {
 		if(nFam > nInd(RCRS[[gen(0)]]) & verbose) msg(1, "nFounder < nFam. Random mating to make nFam parents...")
 		if(printBurnin & founderBurnIn > 0 & verbose) msg(1, "Running", founderBurnIn, "burn-in cycle(s) of random mating...")
-		RCRS[[gen(0)]] <- selectCross(RCRS[[gen(0)]], nInd = nInd(RCRS[[gen(0)]]), use = "rand", simParam = simParam, nCrosses = max(nFam, nInd(RCRS[[gen(0)]]))) 
+		RCRS[[gen(0)]] <- selectCross(RCRS[[gen(0)]], nInd = nInd(RCRS[[gen(0)]]), use = "rand", simParam = SP, nCrosses = max(nFam, nInd(RCRS[[gen(0)]]))) 
 		founderBurnIn <- founderBurnIn - 1
 		if(printBurnin) printBurnin <- FALSE
 	}
 	# phenotype founders
-	RCRS[[gen(0)]] <- setPheno(RCRS[[gen(0)]], varE = h2toVe(founderh2, Vg), reps = founderReps)
+	RCRS[[gen(0)]] <- setPheno(RCRS[[gen(0)]], varE = h2toVe(founderh2, Vg), reps = founderReps, simParam = SP)
+
 
 	# fit GS model and set EBV after phenotyping
 	if(!noGS){	
 		# train GS model and set EBV (after selfing if ssd)
-		if (ssd) RCRS[[gen(0)]] <- self(RCRS[[gen(0)]], nProgeny = nF2, simParam = simParam)
-		GSmodel[[gen(0)]] <- RRBLUP(RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue)
-		# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = simParam, useQtl = useTrue, maxIter = 1000L, ...))
-		RCRS[[gen(0)]] <- setEBV(RCRS[[gen(0)]], GSmodel[[gen(0)]], simParam = simParam)
-		predAcc[["RCRS"]][[gen(0)]] <- getAcc(pop = RCRS[[gen(0)]], simParam = simParam)		
+		if (ssd) RCRS[[gen(0)]] <- self(RCRS[[gen(0)]], nProgeny = nF2, simParam = SP)
+		GSmodel[[gen(0)]] <- RRBLUP(RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = SP, useQtl = useTrue)
+		# GSmodel[[gen(0)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RCRS[[gen(0)]], traits = 1, use = gen0use, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = 1000L, ...))
+		RCRS[[gen(0)]] <- setEBV(RCRS[[gen(0)]], GSmodel[[gen(0)]], simParam = SP)
+		predAcc[["RCRS"]][[gen(0)]] <- getAcc(pop = RCRS[[gen(0)]], simParam = SP)		
 	}
 	
 	# calculate expected selection intensity assuming all best lines are advanced
@@ -359,11 +392,16 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 
 	# for traditional program, keep population of elite lines (best so far) of size nFam. 
 	if(!exists("nElite")) nElite <- nFam 
-	if(traditional > 0) elite[[gen(0)]] <- selectInd(RCRS[[gen(0)]], nInd = min(nInd(RCRS[[gen(0)]]), nElite), use = useIn)
+	if(traditional > 0) elite[[gen(0)]] <- selectInd(RCRS[[gen(0)]], nInd = min(nInd(RCRS[[gen(0)]]), nElite), use = useIn, simParam = SP)
 	
 	# run program for nYr years
+
+##########################################
+# NEED TO UNCOMMENT ELIPSES LINES!!!!!!! #
+##########################################
+
 	for (i in 1:(nYr + nTrial - 1)) { 
-	# for (i in 1:5) { 
+	# for (i in 1:7) { 
 		# i = 1
 		lastRCRSgen <- names(RCRS)[length(RCRS)]
 		lastGSmodel <- if (i <= nYr) gen(i-1) else gen(nYr)
@@ -381,7 +419,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 			} else if(i > 1) {
 				mostAdvancedTrial <- tail(which(sapply(VDP[trials[-length(trials)]], length) > 0), 1)
 				elSel <- if(i <= traditional) VDP[mostAdvancedTrial] else lapply(VDP, tail, 1)[trials[{traditional + 1}:mostAdvancedTrial]] 
-				elite[[gen(i)]] <- selectInd(mergePopsRec(elSel), nInd = nElite, use = useIn)
+				elite[[gen(i)]] <- selectInd(mergePopsRec(elSel), nInd = nElite, use = useIn, simParam = SP)
 				rm(elSel)
 			}
 			if(nInd(elite[[gen(i)]]) > nFam) elite[[gen(i)]] <- elite[[gen(i)]][sample(nInd(elite[[gen(i)]]), nFam)]
@@ -389,13 +427,12 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 
 		if (i <= nYr){ 
 			if (verbose) msg(0, "Year: ", i)
-
 			# predict latest RCRS with updated GS model 
-			if (!noGS & i > 1) RCRS[[lastRCRSgen]] <- setEBV(RCRS[[lastRCRSgen]], GSmodel[[lastGSmodel]], simParam = simParam)
+			if (!noGS & i > 1) RCRS[[lastRCRSgen]] <- setEBV(RCRS[[lastRCRSgen]], GSmodel[[lastGSmodel]], simParam = SP)
 
 			# estimate VDP selection intensity from previous generations
 			if (i > nTrial) {
-				intensity[[gen(i)]] <- estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = Gvar)
+				intensity[[gen(i)]] <- estIntensity(VDP, i, nT = nTrial, start = "trial1", end = "variety", estFunc = estIntFunc, Gvar = Gvar, simParam = SP)
 				if(is.null(setXint)) xInt <- pnorm(intensity[[gen(i)]]) 
 				if(verbose) msg(1, "Realized selection intensity:", round(intensity[[gen(i)]], 3))
 				if(verbose) msg(1, "best variety:", round(max(gv(VDP[["variety"]][[gen(i - nTrial)]])), 3))
@@ -403,9 +440,9 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 			
 			# use selected lines from last trial to make new crosses. Not sure this timeline is realistic...
 			if(verbose) msg(1, "Selecting lines for entry into the VDP...")
-			if(i == 1 | is.null(selFuncOut)){
-
-				selToP <- if(nFam < nInd(RCRS[[lastRCRSgen]])) selectInd(RCRS[[lastRCRSgen]], nInd = nFam, trait = 1, use = useOut) else RCRS[[lastRCRSgen]]
+			# if(i == 1 | is.null(selFuncOut)){ # why did I not allow the first generation to use a given selection method???
+			if(i < startSelFuncOutYr | is.null(selFuncOut)){ 
+				selToP <- if(nFam < nInd(RCRS[[lastRCRSgen]])) selectInd(RCRS[[lastRCRSgen]], nInd = nFam, trait = 1, use = useOut, simParam = SP) else RCRS[[lastRCRSgen]]
 			} else {
 				pullGSmodel <- gen(i - 1) # note, this should actually be defaulting to lastGSmodel
 				# select out of RCRS
@@ -413,18 +450,26 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 				if(is.null(nGenOut)) nGenOut <- cyclePerYr - pullCycle # if longer you need to count!
 				# GSmodelOut <- if(separateTrain) RCRStoVDPmodel[c(pullGSmodel, lastGSmodel)] else GSmodel[c(pullGSmodel, lastGSmodel)]
 				GSmodelOut <- if(separateTrain) RCRStoVDPmodel[[pullGSmodel]] else GSmodel[[lastGSmodel]]
+				
+				# print("This is the F threshold for selFuncOut: ", list(...)$fthreshOut)
+				# selFuncOut <- lapply(selFuncOut, function(x) solqpOut)
 				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RCRS[[pullRCRSgen]], GSfit = GSmodelOut, nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
-												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, ...))
-												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = simParam, fthreshOut = 0.2))
-				# double check this is the correct GS model!!!! Maybe needs to be pullGSmodel???
+												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = SP, ...))
+												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = SP, fthreshOut = 0.3))
+				# grab extras from selFuncOut
+				if(is.list(selToP)){
+					selToPclass <- sapply(selToP, class)
+					extra[["selFuncOut"]][[gen(i)]] <- selToP[selToPclass != "Pop"]
+					selToP <- selToP[[which(selToPclass == "Pop")]]
+				}
 			}
 			# check GP accuracy for material to VDP
 			if(!noGS) {
-				selToP <- setEBV(selToP, GSmodel[[lastGSmodel]], simParam = simParam) #
-				predAcc[["RCRSout"]][[gen(i)]] <- getAcc(pop = selToP, simParam = simParam)
+				selToP <- setEBV(selToP, GSmodel[[lastGSmodel]], simParam = SP) #
+				predAcc[["RCRSout"]][[gen(i)]] <- getAcc(pop = selToP, simParam = SP)
 			}
 
-			if(verbose) msg(1, "VDP input Vg:", round(varA(selToP), 6))
+			if(verbose) msg(1, "VDP input Vg:", round(varA(selToP, simParam = SP), 6))
 			if(verbose) msg(1, "VDP input pop mean:", round(mean(gv(selToP)), 6))
 			famSizei <- round(nFam / nInd(selToP) * famSize) 
 
@@ -448,10 +493,10 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 				famSizei <- newFamSizei + floor(availPlots / nInd(selToP))
 				
 				if(ssd){
-					RCRStoVDP[[gen(i)]] <- self(RCRS[[RCRStoVDPgen]][whichRCRStoVDP], nProgeny = RCRSfamSize)
-					for(i in 1:(cyclePerYr-1)) RCRStoVDP <- self(RCRS[[RCRStoVDPgen]], nProgeny = 1)
+					RCRStoVDP[[gen(i)]] <- self(RCRS[[RCRStoVDPgen]][whichRCRStoVDP], nProgeny = RCRSfamSize, simParam = SP)
+					for(i in 1:(cyclePerYr-1)) RCRStoVDP <- self(RCRS[[RCRStoVDPgen]], nProgeny = 1, simParam = SP)
 				} else {
-					RCRStoVDP[[gen(i)]] <- makeDH(RCRS[[RCRStoVDPgen]][whichRCRStoVDP], nDH = RCRSfamSize)
+					RCRStoVDP[[gen(i)]] <- makeDH(RCRS[[RCRStoVDPgen]][whichRCRStoVDP], nDH = RCRSfamSize, simParam = SP)
 				}
 				if(verbose) {
 					msg(1, nInd(RCRStoVDP[[gen(i)]]), "inbred lines from", nPhRS, "RCRS included in VDP for making crosses")
@@ -478,30 +523,30 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 					msg(0, "NOTICE: Selection intensities within familiy have been rounded to the nearest integer resulting in", nSelToTrial, "progeny per family selected from", nProg, "progeny per family")
 				}
 
-				VDP[[trials[1]]][[gen(i)]] <- if (ssd) self(selToP, nProgeny = nProgPerFam) else makeDH(selToP, nDH = nProgPerFam)
+				VDP[[trials[1]]][[gen(i)]] <- if (ssd) self(selToP, nProgeny = nProgPerFam, simParam = SP) else makeDH(selToP, nDH = nProgPerFam, simParam = SP)
 				
 				msg(1, "DH parent mean:", round(mean(pheno(selToP)), 6), "DH mean:", round(mean(pheno(VDP[[trials[1]]][[gen(i)]])), 6))
 				msg(1, "DH parent GV mean:", round(mean(gv(selToP)), 6), "DH GV mean:", round(mean(gv(VDP[[trials[1]]][[gen(i)]])), 6))
 
 				#select within family if intensity < 1
 				if (withinFamInt < 1) {
-					VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = simParam)
+					VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = SP)
 					fams <- split(1:(nProgPerFam * nInd(selToP)), rep(1:nInd(selToP), each = nProgPerFam))
 					faml <- list()
 					for (j in names(fams)){
-						faml[[j]] <- selectInd(VDP[[trials[1]]][[gen(i)]][fams[[j]]], nInd = famSizei, trait = 1, use = useOut) 
+						faml[[j]] <- selectInd(VDP[[trials[1]]][[gen(i)]][fams[[j]]], nInd = famSizei, trait = 1, use = useOut, simParam = SP) 
 					}
 					VDP[[trials[1]]][[gen(i)]] <- mergePops(faml)		
 				}
 			} else {
 				if(is.null(nGenInbr)) nGenInbr <- cyclePerYr  
 				VDP[[trials[1]]][[gen(i)]] <- do.call(inbreedFunc[[i]], getArgs(inbreedFunc[[i]], pop = selToP, GSfit = GSmodel[[lastGSmodel]], # use last GS model here because selectOut will burn through the rest of the year. Need to make flexible if not. 
-					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam, ...))
-					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = simParam))
+					trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = SP, ...))
+					# trait = 1, use = useInbreed, int = withinFamInt, ssd = ssd, nProgeny = famSizei, nGenInbr = nGenInbr, simParam = SP))
 			}
 
-			if(!noGS) VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = simParam) #
-			predAcc[["VDPin"]][[gen(i)]] <- if(noGS) NULL else getAcc(pop = VDP[[trials[1]]][[gen(i)]], simParam = simParam)
+			if(!noGS) VDP[[trials[1]]][[gen(i)]] <- setEBV(VDP[[trials[1]]][[gen(i)]], GSmodel[[lastGSmodel]], simParam = SP) #
+			predAcc[["VDPin"]][[gen(i)]] <- if(noGS) NULL else getAcc(pop = VDP[[trials[1]]][[gen(i)]], simParam = SP)
 
 			msg(1, "best new line:", round(max(gv(VDP[[trials[1]]][[gen(i)]])), 6))
 		}
@@ -514,8 +559,8 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		# phenotype, or predict if skipped
 		for (g in index) {
 			Vgi <- if (updateVg) varG(VDP[[trials[genBack[g]]]][[gen(genI[g])]])[[1]] else Vg
-			if (!trials[genBack[g]] %in% skip) VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setPheno(VDP[[trials[genBack[g]]]][[gen(genI[g])]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
-			if(phenoRCRS > 0 & i > 1 & g == 1 & i <= nYr) RCRStoVDP[[gen(i)]] <- setPheno(RCRStoVDP[[gen(i)]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]])
+			if (!trials[genBack[g]] %in% skip) VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setPheno(VDP[[trials[genBack[g]]]][[gen(genI[g])]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]], simParam = SP)
+			if(phenoRCRS > 0 & i > 1 & g == 1 & i <= nYr) RCRStoVDP[[gen(i)]] <- setPheno(RCRStoVDP[[gen(i)]], varE = h2toVe(h2[genBack[g]], Vgi), reps = trialReps[genBack[g]] * trialLocs[genBack[g]], simParam = SP)
 		}
 
 		if (i <= nYr){
@@ -533,29 +578,36 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 					if(verbose) msg(1, "Individuals selected out of", VDPsel, "from generation", oriGen, "for crossing...")
 				
 				} else {
-					RCRS[[gen(j-1)]] <- setEBV(RCRS[[gen(j-1)]], GSmodel[[lastGSmodel]], simParam = simParam)
+					RCRS[[gen(j-1)]] <- setEBV(RCRS[[gen(j-1)]], GSmodel[[lastGSmodel]], simParam = SP)
 					selPop <- RCRS[[gen(j-1)]]
 					predAcc[["RCRS"]][[gen(j-1)]] <- getAcc(selPop)
 				}
 				# run GS model to cycle through RCRS for year i
  				if(traditional > 0) {
-					RCRS[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elitepop = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = simParam, 
+					RCRS[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elitepop = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = SP, 
 						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
 						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
 				} else if(is.null(selFuncIn)){
-					RCRS[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRCRSi, nInd(selPop)), use = useIn,  trait = 1, simParam = simParam, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn)
+					RCRS[[gen(j)]] <- selectCross(pop = selPop, nInd = min(selectRCRSi, nInd(selPop)), use = useIn,  trait = 1, simParam = SP, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn)
 				} else {
-					RCRS[[gen(j)]] <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRCRSi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
-					trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
-					# trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = simParam, fthresh = 0.01))
+					RCRSsel <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRCRSi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
+					trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = SP, ...))
+					# trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = SP, fthresh = 0.01))
+					if(is.list(RCRSsel)){
+						RCRSselClass <- sapply(RCRSsel, class)
+						extra[["selFuncIn"]][[gen(j)]] <- RCRSsel[RCRSselClass != "Pop"]
+						RCRS[[gen(j)]] <- RCRSsel[[which(RCRSselClass == "Pop")]]
+					} else {
+						RCRS[[gen(j)]] <- RCRSsel
+					}
 					if(nInd(RCRS[[gen(j)]]) != nRCRS) msg(2, "Only", nInd(RCRS[[gen(j)]]), "crosses made in RCRS...")
 				}
 				# would be good to be able to select within f2 family if f2 > 1
-				if (selF2) RCRS[[gen(j)]] <- self(RCRS[[gen(j)]], nProgeny = nF2, simParam = simParam)
+				if (selF2) RCRS[[gen(j)]] <- self(RCRS[[gen(j)]], nProgeny = nF2, simParam = SP)
 				# if(jp == pullCycle) {
 				# 	pullRCRSgen <- gen(j) # should I push material out earlier?
 				# }
-				if(verbose) msg(1, "RCRS Vg:", round(varA(RCRS[[gen(j)]]), 6))
+				if(verbose) msg(1, "RCRS Vg:", round(varA(RCRS[[gen(j)]], simParam = SP), 6))
 				if(verbose) msg(1, "RCRS Pop Mean:", round(mean(RCRS[[gen(j)]]@gv), 6))
 			}
 			pullRCRSgen <- if(pullCycle > 0) gen(cycle[[pullCycle]]) else lastRCRSgen
@@ -579,12 +631,12 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 						RCRStoVDPtrian <- mergePopsRec(RCRStoVDPtrian) 
 						msg(1, "Training set for RCRSout branch has", RCRStoVDPtrian@nInd, "individuals...")	
 						if(!is.null(GSfunc)){
-							RCRStoVDPmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+							RCRStoVDPmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 						} else {
 							if(nInd(RCRStoVDPtrian) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
-								RCRStoVDPmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+								RCRStoVDPmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 							} else {
-								RCRStoVDPmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+								RCRStoVDPmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = RCRStoVDPtrian, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 							}
 						}
 					} else {
@@ -595,16 +647,16 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 				# concatenate training set and train GS model
 		 		train <- mergePopsRec(trnSet) 
 				msg(1, "Training set has", train@nInd, "individuals...")	
-				if(genParam(train)$varG == 0) {
+				if(genParam(train, simParam = SP)$varG == 0) {
 					GSmodel[[gen(i)]] <- GSmodel[[gen(i - 1)]]
 				} else {
 					if(!is.null(GSfunc)){
-						GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+						GSmodel[[gen(i)]] <- do.call(GSfunc, getArgs(GSfunc, pop = train, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 					} else {
-						if(nInd(train) > simParam$snpChips[[1]]@nLoci * switchGSfunc) {
-							GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+						if(nInd(train) > SP$snpChips[[1]]@nLoci * switchGSfunc) {
+							GSmodel[[gen(i)]] <- do.call(RRBLUP2, getArgs(RRBLUP2, pop = train, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 						} else {
-							GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam=simParam, useQtl = useTrue, maxIter = maxIter))#, ...))
+							GSmodel[[gen(i)]] <- do.call(RRBLUP, getArgs(RRBLUP, pop = train, traits = 1, use = useGS, snpChip = 1, simParam = SP, useQtl = useTrue, maxIter = maxIter, ...))
 						}
 					}
 				}
@@ -616,21 +668,21 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 		for (g in index) {
 			GSmodelVDP <- if (trials[genBack[g]] %in% skip) lastGSmodel else gen(min(i, nYr))
 			if(!noGS) {
-				VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setEBV(VDP[[trials[genBack[g]]]][[gen(genI[g])]], GSmodel[[GSmodelVDP]], simParam = simParam)
+				VDP[[trials[genBack[g]]]][[gen(genI[g])]] <- setEBV(VDP[[trials[genBack[g]]]][[gen(genI[g])]], GSmodel[[GSmodelVDP]], simParam = SP)
 				predAcc[["VDP"]][[trials[[genBack[g]]]]][gen(genI[g])] <- getAcc(pop = VDP[[trials[genBack[g]]]][[gen(genI[g])]])
 			}
 			# select based on ebv or phenotype
 			sel <- if (trials[genBack[g]] %in% skip) "ebv" else  useVDP
 			if (i - genI[g] < nTrial) {
 				if(is.null(selFuncVDP)){
-					VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = min(selectTrials[genBack[g]], nInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]])), trait = 1, use = sel, returnPop = TRUE)
+					VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = min(selectTrials[genBack[g]], nInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]])), trait = 1, use = sel, returnPop = TRUE, simParam = SP)
 				} else {
 					VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- do.call(selFuncVDP[[i]], getArgs(selFuncVDP[[i]], nSel = min(selectTrials[genBack[g]], nInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]])), 
 																									  pop = VDP[[trials[genBack[g]]]][[gen(genI[g])]], GSfit = GSmodel[[lastGSmodel]], trait = 1, use = sel, 
-																									  returnPop = TRUE, verbose = verbose, Gvar = Gvar, simParam = simParam, ...))
+																									  returnPop = TRUE, verbose = verbose, Gvar = Gvar, simParam = SP, ...))
 				}
 			}
-			if (ssd) VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- self(VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]])
+			if (ssd) VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]] <- self(VDP[[trials[genBack[g] + 1]]][[gen(genI[g])]], simParam = SP)
 		}
 
 		if (i <= nYr){
@@ -640,7 +692,7 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 				if (sum(returnToRCRS) > 0){	
 					addToRCRS <- list()
 					for (g in index[returnToRCRS]) {
-						addToRCRS[[gen(g)]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = returnVDPtoRCRS[genBack[g]], trait = 1, use = returnVDPcrit, returnPop = TRUE) 
+						addToRCRS[[gen(g)]] <- selectInd(VDP[[trials[genBack[g]]]][[gen(genI[g])]], nInd = returnVDPtoRCRS[genBack[g]], trait = 1, use = returnVDPcrit, returnPop = TRUE, simParam = SP) 
 					}
 					if (length(addToRCRS) > 0){
 						addToRCRS <- mergePopsRec(addToRCRS)
@@ -653,5 +705,8 @@ simSingleTraitInbred <- function(founderPop, paramL, simParam = SP, returnFunc =
 	}
 
 	rL <- list(SP = SP, paramL = paramL, RCRS = RCRS, VDP = VDP, GSmodel = GSmodel, predAcc = predAcc, selIntensity = intensity)
-	do.call(returnFunc, getArgs(returnFunc, resultL = rL, ...))
+	# print(extra)
+	# if(length(extra)) rL <- c(rL, extra)
+	rL <- c(rL, list(extra = extra))
+	do.call(returnFunc, getArgs(returnFunc, resultL = rL, simParam = SP, ...))
 }
