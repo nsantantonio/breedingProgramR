@@ -86,6 +86,7 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 				samplep2 <- index[pars[index] != pars[p1]]
 				p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
 				if(length(p2) == 0) next
+				if(is.na(pars[p1]) | is.na(pars[p1])) print(paste(pars[p1], pars[p2], sep = "  :  "))
 				if(pars[p1] == pars[p2]) {msg(2, "oops\n"); break}
 				crossi <- c(p1, p2)
 				parList[[i]] <- pars[crossi]
@@ -95,5 +96,5 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 		}
 	}
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	makeCross(pop, crossPlan = selection, simParam = simParam) 
+	list(pop = makeCross(pop, crossPlan = selection, simParam = simParam), lambda = lambda[whichLambda])
 }

@@ -4,9 +4,10 @@
 \alias{solqpOut}
 \title{solqpOut function}
 \usage{
-solqpOut(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simParam,
-  limitN = 1, lambdaOut = NULL, fthreshOut = NULL, gainOut = NULL,
-  truncqpOut = NULL, verbose = FALSE, ...)
+solqpOut(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr,
+  simParam = NULL, limitN = 1, lambdaOut = NULL, fthreshOut = NULL,
+  gainOut = NULL, truncqpOut = NULL, varFunc = varA,
+  verbose = FALSE, ...)
 }
 \arguments{
 \item{pop}{[value]}
@@ -34,6 +35,8 @@ solqpOut(pop, GSfit, use, nSel, nProgeny, nGenOut, nGenThisYr, simParam,
 \item{gainOut}{[value]. Default is NULL}
 
 \item{truncqpOut}{[value]. Default is NULL}
+
+\item{varFunc}{[value]. Default is varA}
 
 \item{verbose}{[value]. Default is FALSE}
 }
