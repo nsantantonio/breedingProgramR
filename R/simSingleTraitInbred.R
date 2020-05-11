@@ -169,8 +169,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 		nGenOut = NULL,
 		nGenInbr = NULL,
 		phenoRCRS = 0,
-		separateTrain = FALSE,
-		verbose = FALSE
+		separateTrain = FALSE
 	)
 
 	
@@ -195,7 +194,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 						"founderReps", "founderKeep", "selectRCRS", "pullCycle", "startSelFuncOutYr", "nProgenyPerCrossIn", "nProgenyPerCrossOut", "useIn", 
 						"useOut", "useInbreed", "useVDP", "returnVDPcrit", "selFuncOut", "selFuncIn", "selFuncVDP", "inbreedFunc", "withinFamInt", "setXint", 
 						"skip", "nFounder", "nRCRS", "nFam", "famSize", "ssd", "selF2", "nF2", "Vg", "updateVg", "h2", "nYr", "selectTrials", "trialReps", 
-						"trialLocs", "cyclePerYr", "returnVDPtoRCRS", "nGenOut", "nGenInbr", "phenoRCRS", "separateTrain", "verbose")
+						"trialLocs", "cyclePerYr", "returnVDPtoRCRS", "nGenOut", "nGenInbr", "phenoRCRS", "separateTrain")
 		xtraParams <- names(paramL)[!names(paramL) %in% paramNames]
 		if (length(xtraParams)) {
 			# print unrecognized parameters
@@ -203,7 +202,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 			cat("Unrecognized parameters have been provided to the 'paramL' argument. If these were meant to be passed to user defined functions, please provide them directly to simSingleTraitInbred().The following will be ignored:\n", paste(xtraParams, collapse = ", "), "\n")
 		}
 		# could remove below, shouldnt happen as all parameters are specified by defaults
-		print(paramNames[paramNames %in% names(paramL)])
+		# print(paramNames[paramNames %in% names(paramL)])
 		if (!all(paramNames %in% names(paramL))) stop("not all parameters in 'paramL'! Please include all these parameters in parameter list:\n", paste0(paramNames, "\n"))
 		
 	}
@@ -584,7 +583,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 				}
 				# run GS model to cycle through RCRS for year i
  				if(traditional > 0) {
-					RCRS[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elitepop = elite[[gen(i)]], families = families, nFam = nFam, famSize = famSizei, use = useIn, trait = 1, simParam = SP, 
+					RCRS[[gen(j)]] <- do.call(tradSelCross2, getArgs(tradSelCross2, pop = selPop, elitepop = elite[[gen(i)]], nFamilies = nFam, families = families, familySize = famSizei, use = useIn, trait = 1, simParam = SP, 
 						nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose, ...))
 						# nCrosses = nFam, nProgeny = nProgenyPerCrossIn, verbose = verbose))
 				} else if(is.null(selFuncIn)){
