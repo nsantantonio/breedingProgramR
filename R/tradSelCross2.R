@@ -6,7 +6,7 @@
 #' @param elitepop [value]
 #' @param nCrosses [value]
 #' @param nFam [value]
-#' @param famSize [value]
+#' @param familySize [value]
 #' @param families [value]
 #' @param use [value]
 #' @param best [value]. Default is TRUE
@@ -20,7 +20,7 @@
 #' @details [fill in details here]
 #' @examples none
 #' @export
-tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use, best = TRUE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
+tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, familySize, families, use, simParam = NULL, best = TRUE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
 	if(is.character(use)) use <- match.fun(use)
 
 	if(any(table(elitepop@id) > 1)) msg(2, "WARNING: some elites repeated!")
@@ -40,11 +40,11 @@ tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use,
 	famSel <- names(sort(famMeans, decreasing = TRUE))[1:min(famNum, nFamSel)]
 
 	candFamL <- famL[famSel]
-	inFamNum <- round(famSize * intWithin)
+	inFamNum <- round(familySize * intWithin)
 
 	parentL <- list()
 	for(i in famSel) {
-		parentL[[i]] <- selectInd(pop[candFamL[[i]]], nInd = min(nInd(pop[candFamL[[i]]]), inFamNum))
+		parentL[[i]] <- selectInd(pop[candFamL[[i]]], nInd = min(nInd(pop[candFamL[[i]]]), inFamNum), simParam = simParam)
 		parentL[[i]] <- parentL[[i]][order(use(parentL[[i]]), decreasing = TRUE)]
 	}
 
@@ -104,7 +104,7 @@ tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, famSize, families, use,
 	if(verbose) msg(2, "Number of lines selected from each family for crosses:", sapply(crossFamilies, length))
 
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
-	newpop <- makeCross(mergePopsRec(list(pop, elitepop)), crossPlan = selection) 
+	newpop <- makeCross(mergePopsRec(list(pop, elitepop)), crossPlan = selection, simParam = simParam) 
 
 	if(verbose) msg(2, "Selection mean:", round(mean(gv(newpop)), 6), "from pop mean:", round(mean(gv(pop)), 6))
 	newpop
