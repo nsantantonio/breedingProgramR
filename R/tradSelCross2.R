@@ -5,7 +5,7 @@
 #' @param pop [value]
 #' @param elitepop [value]
 #' @param nCrosses [value]
-#' @param nFam [value]
+#' @param nFamilies [value]
 #' @param familySize [value]
 #' @param families [value]
 #' @param use [value]
@@ -20,7 +20,7 @@
 #' @details [fill in details here]
 #' @examples none
 #' @export
-tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, familySize, families, use, simParam = NULL, best = TRUE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
+tradSelCross2 <- function(pop, elitepop, nCrosses, nFamilies, familySize, families, use, simParam = NULL, best = TRUE, nProgeny = 1, intWithin = 0.2, intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE, verbose = FALSE){
 	if(is.character(use)) use <- match.fun(use)
 
 	if(any(table(elitepop@id) > 1)) msg(2, "WARNING: some elites repeated!")
@@ -30,9 +30,9 @@ tradSelCross2 <- function(pop, elitepop, nCrosses, nFam, familySize, families, u
 	famNum <- sum(repFam)
 		
 	if(famNum == 1) msg(2, "NOTE: Only one family represented!")
-	# if(nInd(elitepop) > nFam) elitepop <- elitepop[sample(nInd(elitepop), nFam)]
+	# if(nInd(elitepop) > nFamilies) elitepop <- elitepop[sample(nInd(elitepop), nFamilies)]
 
-	nFamSel <- ceiling(nFam * intAcross)
+	nFamSel <- ceiling(nFamilies * intAcross)
 	if(famNum < nFamSel) msg(2, "NOTE: insufficient families represented to use specified intAcross. Using individuals from", famNum ,"represented families")
 	msg(2, "Number of families available for crossing", min(famNum, nFamSel))
 

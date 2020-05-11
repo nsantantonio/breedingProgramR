@@ -4,8 +4,8 @@
 \alias{tradSelCross2}
 \title{tradSelCross2 function}
 \usage{
-tradSelCross2(pop, elitepop, nCrosses, nFam, familySize, families, use,
-  simParam = NULL, best = TRUE, nProgeny = 1, intWithin = 0.2,
+tradSelCross2(pop, elitepop, nCrosses, nFamilies, familySize, families,
+  use, simParam = NULL, best = TRUE, nProgeny = 1, intWithin = 0.2,
   intAcross = 1, equalWeight = FALSE, useFamPrior = FALSE,
   verbose = FALSE)
 }
@@ -16,7 +16,7 @@ tradSelCross2(pop, elitepop, nCrosses, nFam, familySize, families, use,
 
 \item{nCrosses}{[value]}
 
-\item{nFam}{[value]}
+\item{nFamilies}{[value]}
 
 \item{familySize}{[value]}
 
