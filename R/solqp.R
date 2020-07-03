@@ -73,20 +73,53 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 			whichLambda <- 1
 		}
 		msg(2, "lambda:", lambda[whichLambda])
+
+		# check if lamda = 0, then inspect
+		# if(lambda[whichLambda] == 0){
+		# 	msg(0, "!!!!!!!!!!! LAMBDAS ALL ZERO !!!!!!!!!!")
+		# 	msg(0, range(cee[[whichLambda]]))
+		# 	print(sapply(log, "[[", 1))
+		# }
+
+
+		msg(0, "nCrosses: ", nCrosses)
+		print(sum(cee[[whichLambda]]))
+		print(sum(cee[[whichLambda]] * 2 * nCrosses))
 		propPar <- round(cee[[whichLambda]] * 2 * nCrosses)
+		print(c(propPar))
+
+		if(all(propPar == 0)){
+			# this is it!!!! nCrosses is being set too low in solqpout, nned a default here when the proportion is too smalll for desired number of crosses
+			msg(0, "c range: ", range(cee[[whichLambda]]))
+			msg(0, "sum(c): ", sum(cee[[whichLambda]]))
+			msg(0, "number of crosses: ", sum(propPar))
+
+			propPar[] <- 1
+			# print(sapply(log, "[[", 1))
+			# reassign proppar here!
+			# nPars 2 * nCrosses
+			# propPar <- 
+		}
+
 		rownames(propPar) <- pop@id
 		pars <- rep(pop@id, times = propPar)
+		msg(0, unique(pars))
+		printpars <- pars
 		if (length(unique(pars)) == 1){
 			selection <- do.call(rbind, rep(list(rep(unique(pars), 2)), nCrosses))
 		} else {
 			parList <- list()
 			index <- 1:length(pars)
+			# print(pars)
+			# print(index)
 			for(i in 1:min(nCrosses, floor(length(pars) / 2))) {
 				p1 <- betterSample(index, 1)
 				samplep2 <- index[pars[index] != pars[p1]]
 				p2 <- if(allowSelf) betterSample(index[-p1], 1) else betterSample(samplep2, 1)
 				if(length(p2) == 0) next
-				if(is.na(pars[p1]) | is.na(pars[p1])) print(paste(pars[p1], pars[p2], sep = "  :  "))
+				# if(is.na(pars[p1]) | is.na(pars[p1])) print(printpars)
+				# if(is.na(pars[p1]) | is.na(pars[p1])) print(paste(pars[p1], pars[p2], sep = "  :  "))
+				# if(is.na(pars[p1]) | is.na(pars[p1])) {print(index); print(pars[index])}
 				if(pars[p1] == pars[p2]) {msg(2, "oops\n"); break}
 				crossi <- c(p1, p2)
 				parList[[i]] <- pars[crossi]
@@ -95,6 +128,8 @@ solqp <- function(pop, GSfit, use, nCrosses, simParam, lambda = NULL, fthresh = 
 			selection <- do.call(rbind, parList)
 		}
 	}
+
+	msg(0, "############### END CYCLE ################")
 	if(nProgeny > 1) selection <- selection[rep(1:nrow(selection), each = nProgeny), ] 
 	list(pop = makeCross(pop, crossPlan = selection, simParam = simParam), lambda = lambda[whichLambda])
 }
