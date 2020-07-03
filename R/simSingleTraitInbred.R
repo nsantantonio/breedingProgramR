@@ -117,7 +117,7 @@
 #' @examples none
 #' @export
 simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose = TRUE, checkParam = TRUE, GSfunc = NULL, switchGSfunc = 4, ...){
-# k = 2; paramL = userArgs; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats; verbose = TRUE
+# k = 6; paramL = userArgs; intAcross = 0.5; intWithin = 0.2; verbose = TRUE; checkParam = FALSE; GSfunc = RRBLUP; nGenOut = NULL; nGenInbr = NULL; returnFunc = getPopStats; verbose = TRUE
 	
 	#default parameters for the breeding program. Any of these that are supplied in the list given to the paramL argument will be changed accordingly.
 	defArgs <- list(
@@ -177,8 +177,10 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 	# replace default arguments with user supplied arguments in paramL
 	paramL <- argumentChange(defArgs, paramL) 
 
-	if(!is.null(paramL$seed)) set.seed(paramL$seed + k)
-
+	if(!is.null(paramL$seed)) {
+		set.seed(paramL$seed + k)
+		msg(0, "Setting seed to:", paramL$seed + k)
+	}
 	# print(paste0("file is : ", paramL$founderPop[k]))
 
 	# load(paramL$founderPop[k])
@@ -454,7 +456,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 				# selFuncOut <- lapply(selFuncOut, function(x) solqpOut)
 				selToP <- do.call(selFuncOut[[i]], getArgs(selFuncOut[[i]], pop = RCRS[[pullRCRSgen]], GSfit = GSmodelOut, nSel = nFam, nGenOut = nGenOut, nGenThisYr = cyclePerYr - pullCycle, 
 												  trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = SP, ...))
-												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = SP, fthreshOut = 0.3))
+												  # trait = 1, use = useOut, quant = xInt, nProgeny = nProgenyPerCrossOut, Gvar = Gvar, simParam = SP, fthreshOut = 0.1))
 				# grab extras from selFuncOut
 				if(is.list(selToP)){
 					selToPclass <- sapply(selToP, class)
@@ -566,6 +568,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 			if(SP$isTrackPed) ped[[gen(i)]] <- cbind(VDP[[trials[1]]][[gen(i)]]@mother, VDP[[trials[1]]][[gen(i)]]@father, VDP[[trials[1]]][[gen(i)]]@id)
 			# if(traditional) 
 			for (j in cycle){
+				# j = cycle[[1]]
 				jp <- which(cycle == j)
 				if(traditional > 0) {
 					whichTrials <- which(sapply(VDP, length) > 0)
@@ -591,7 +594,7 @@ simSingleTraitInbred <- function(paramL, returnFunc = identity, k = 1, verbose =
 				} else {
 					RCRSsel <- do.call(selFuncIn[[i]][[jp]], getArgs(selFuncIn[[i]][[jp]], nSel = selectRCRSi, pop = selPop, GSfit = GSmodel[[lastGSmodel]],
 					trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = SP, ...))
-					# trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = SP, fthresh = 0.01))
+					# trait = 1,  use = useIn, nCrosses = nRCRS, nProgeny = nProgenyPerCrossIn, quant = xInt, verbose = verbose, Gvar = Gvar, simParam = SP, fthresh = 0.005))
 					if(is.list(RCRSsel)){
 						RCRSselClass <- sapply(RCRSsel, class)
 						extra[["selFuncIn"]][[gen(j)]] <- RCRSsel[RCRSselClass != "Pop"]
